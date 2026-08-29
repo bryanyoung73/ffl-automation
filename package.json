@@ -5,6 +5,7 @@
   "description": "Playwright automation for managing a Yahoo Fantasy Football team",
   "type": "module",
   "scripts": {
+    "login:chrome": "tsx src/cli/launch-chrome.ts",
     "login": "tsx src/cli/login.ts",
     "roster": "tsx src/cli/show-roster.ts",
     "lineup": "tsx src/cli/set-lineup.ts",

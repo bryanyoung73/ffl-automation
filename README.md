@@ -27,14 +27,33 @@ Yahoo sessions last a few weeks. When a command says the session expired, run
 npm install
 npx playwright install chromium
 cp env.example .env      # created automatically on first run too; edit if needed
-npm run login            # opens a browser — sign in, then press Enter
 ```
+
+### Logging in (Google sign-in)
+
+Google blocks OAuth in browsers that Playwright launches ("this browser may not
+be secure"). So the login step drives your **real installed Chrome** instead:
+
+```bash
+npm run login:chrome     # opens your Chrome with a debug port + dedicated profile
+#   -> in that window, sign in to Yahoo with Google, land on your team page, leave it open
+npm run login            # in a second terminal: attaches, saves .auth/storageState.json
+```
+
+`login:chrome` uses a separate profile in `.auth/chrome-profile/` (gitignored),
+so it never touches your everyday Chrome and you don't have to close it. You only
+repeat this when Yahoo expires the session (every few weeks).
+
+If you instead add a **password** to your Yahoo account (Yahoo Account → Security),
+plain `npm run login` can automate the Yahoo email+password form directly with no
+Chrome dance.
 
 ## Commands
 
 | Command | What it does |
 | --- | --- |
-| `npm run login` | Interactive sign-in; saves the session. Re-run when it expires. |
+| `npm run login:chrome` | Launch your real Chrome (debug port + dedicated profile) to sign in. |
+| `npm run login` | Attach to that Chrome (or fall back to a bundled browser) and save the session. |
 | `npm run roster` | Print current roster: slot, player, projection, injury status. Read-only. |
 | `npm run lineup` | Optimize the lineup, show a diff, confirm, submit. |
 | `npm run lineup -- --dry-run` | Optimize and print only. Never submits. |
@@ -69,7 +88,7 @@ src/
     optimizer.ts       pure: roster + projections -> optimal legal lineup
     types.ts
   cli/
-    login.ts  show-roster.ts  set-lineup.ts  prompt.ts
+    launch-chrome.ts  login.ts  show-roster.ts  set-lineup.ts  prompt.ts
 tests/
   optimizer.spec.ts    pure logic, no browser
   lineup-page.spec.ts  live scrape check (auto-skips without a session)
