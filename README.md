@@ -1,10 +1,17 @@
 # ffl-automation
 
-Playwright automation for a Yahoo Fantasy Football team. Auto-optimizes the
-weekly starting lineup from Yahoo's own projections.
+Playwright automation for a Yahoo Fantasy Football team (league `891808`, team
+`14` — <https://football.fantasysports.yahoo.com/f1/891808?mid=14>).
 
-Team: league `891808`, team `14`
-(<https://football.fantasysports.yahoo.com/f1/891808?mid=14>)
+- **`npm run cheatsheet`** — printable draft board from Yahoo's pre-rank page,
+  ordered by ADP with tiers, flagging where Yahoo's analysts disagree with the
+  draft room. Working.
+- **`npm run lineup`** — auto-optimize the weekly starting lineup from Yahoo's
+  projections. Built; selectors need a one-time tune against a real post-draft
+  roster.
+
+The league is an **offline draft**, so the cheat sheet is a reference you print
+or open on a tablet — nothing is pushed back to Yahoo.
 
 ## How authentication works
 
@@ -54,6 +61,9 @@ Chrome dance.
 | --- | --- |
 | `npm run login:chrome` | Launch your real Chrome (debug port + dedicated profile) to sign in. |
 | `npm run login` | Attach to that Chrome (or fall back to a bundled browser) and save the session. |
+| `npm run cheatsheet` | Draft board: 300 players by ADP, snake-round tiers, flags where Yahoo's expert rank disagrees with ADP. Writes `artifacts/cheatsheet-<date>.{md,csv}`. Read-only. |
+| `npm run cheatsheet -- --threshold 25` | Stricter flag bar (default 18). |
+| `npm run cheatsheet -- --pos QB` | One position only. |
 | `npm run roster` | Print current roster: slot, player, projection, injury status. Read-only. |
 | `npm run lineup` | Optimize the lineup, show a diff, confirm, submit. |
 | `npm run lineup -- --dry-run` | Optimize and print only. Never submits. |

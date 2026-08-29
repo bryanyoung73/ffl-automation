@@ -1,4 +1,97 @@
+import type { Board, BoardRow } from "./board.js";
 import type { CheatSheet, Override, Position } from "./types.js";
+
+export interface RenderedBoard {
+  markdown: string;
+  csv: string;
+  summary: string;
+}
+
+const NOTE_LABEL: Record<BoardRow["note"], string> = {
+  "": "",
+  "yahoo-hot": "Yahoo ranks earlier than ADP",
+  "yahoo-cold": "Yahoo ranks later than ADP",
+};
+
+/** Printable draft board: tiers as sections, plus a flat CSV. */
+export function renderBoard(board: Board): RenderedBoard {
+  const scope = board.positionFilter ? ` — ${board.positionFilter}` : "";
+  const lines: string[] = [
+    `# Draft cheat sheet${scope}`,
+    "",
+    `_${board.generatedAt}_ · ${board.teams}-team · ordered by ADP (fallback XRank)`,
+    "",
+    `**${board.verdict}**`,
+    "",
+  ];
+
+  let currentTier = 0;
+  for (const row of board.rows) {
+    if (row.tier !== currentTier) {
+      currentTier = row.tier;
+      lines.push(
+        "",
+        `## Tier ${currentTier}  (picks ${(currentTier - 1) * board.teams + 1}–${currentTier * board.teams})`,
+        "",
+        "| # | Player | Pos | Team | Bye | ADP | Yahoo | Flag |",
+        "| ---: | --- | --- | --- | ---: | ---: | ---: | --- |",
+      );
+    }
+    lines.push(
+      `| ${row.rank} | ${row.player.name} | ${row.player.position} | ${row.player.team} | ${row.player.bye ?? "—"} | ${fmt(row.adp)} | ${fmt(row.yahooExpertPos)} | ${NOTE_LABEL[row.note]} |`,
+    );
+  }
+
+  return {
+    markdown: lines.join("\n"),
+    csv: boardCsv(board.rows),
+    summary: boardSummary(board),
+  };
+}
+
+function boardCsv(rows: BoardRow[]): string {
+  const header =
+    "rank,player,position,team,bye,adp,yahoo_expert_pos,yahoo_list_rank,xrank,yahoo_gap,tier,flag";
+  const body = rows.map((r) =>
+    [
+      r.rank,
+      csvField(r.player.name),
+      r.player.position,
+      r.player.team,
+      r.player.bye ?? "",
+      r.adp ?? "",
+      r.yahooExpertPos ?? "",
+      r.listRank,
+      r.xRank ?? "",
+      r.yahooGap ?? "",
+      r.tier,
+      r.note,
+    ].join(","),
+  );
+  return [header, ...body].join("\n");
+}
+
+function boardSummary(board: Board): string {
+  const flagged = board.rows
+    .filter((r) => r.note !== "")
+    .sort((a, b) => Math.abs(b.yahooGap ?? 0) - Math.abs(a.yahooGap ?? 0))
+    .slice(0, 12);
+  const lines = [board.verdict];
+  if (flagged.length) {
+    lines.push("", "Where Yahoo's experts most disagree with ADP (early picks):");
+    for (const r of flagged) {
+      const dir = r.note === "yahoo-hot" ? "Yahoo higher" : "Yahoo lower";
+      lines.push(
+        `  board #${r.rank} ${r.player.name} (${r.player.position}) — ADP ${fmt(r.adp)}, Yahoo expert ~#${r.yahooExpertPos}  [${dir} by ${Math.abs(r.yahooGap ?? 0)}]`,
+      );
+    }
+  }
+  return lines.join("\n");
+}
+
+function fmt(n: number | null | undefined): string {
+  return typeof n === "number" ? String(n) : "—";
+}
 
 export interface BuildCheatSheetInput {
   overrides: Override[];

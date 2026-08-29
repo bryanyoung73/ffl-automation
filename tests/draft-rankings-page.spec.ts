@@ -33,10 +33,12 @@ test("default pre-rank returns an ordered player list with byes", async ({ brows
   try {
     const preRank = await new DraftRankingsPage(page, config).readPreRank();
     expect(preRank.length).toBeGreaterThan(50);
-    expect(preRank[0]?.rank).toBe(1);
-    expect(preRank.map((p) => p.rank)).toEqual(preRank.map((_, i) => i + 1));
+    expect(preRank[0]?.listRank).toBe(1);
+    expect(preRank.map((p) => p.listRank)).toEqual(preRank.map((_, i) => i + 1));
     expect(preRank.some((p) => typeof p.bye === "number")).toBe(true);
+    expect(preRank.some((p) => typeof p.adp === "number")).toBe(true);
     expect(preRank.every((p) => p.name.length > 0)).toBe(true);
+    expect(preRank.every((p) => /^[A-Z]{2,3}$/.test(p.team))).toBe(true);
   } finally {
     await context.close();
   }

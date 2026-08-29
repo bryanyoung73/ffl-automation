@@ -136,3 +136,34 @@ New `.env`: `DRAFT_OVERRIDE_THRESHOLD=10`.
 1. Feature C — push the override sheet to `editprerank`.
 2. `fantasyPros.ts` — real ECR provider.
 3. Feature D — live draft assistant (own spec).
+
+---
+
+## Addendum — 2026-08-29, after live DOM inspection
+
+**League is an Offline Draft** (drafted off Yahoo, results keyed in after). No
+autodraft consumes `editprerank`, so "override so draft day goes better" doesn't
+apply. Reframed to a **printable cheat sheet** (user's call).
+
+**`editprerank` is a single rich source.** One scrape yields, for ~300 players:
+name, position, team, bye, Yahoo expert rank (`XRank`), and ADP. The separate
+ADP and projections pages are not needed for v1. Projected points load only on
+row expand (300 clicks) → **VOR is deferred to v2**; `vor.ts` / `diff.ts` /
+`signals/` and their tests stay as v2 building blocks but are not wired.
+
+**Shipped in v1:**
+- `src/draft/board.ts` — orders the pool by ADP (fallback XRank → list order),
+  snake-round tiers, flags where Yahoo's expert rank (densified to 1..n) diverges
+  from board rank by ≥ threshold, within the first ~7 rounds only (XRank stops
+  discriminating past ~pick 200), K/DEF excluded by default.
+- `renderBoard()` in `report.ts` — tiered markdown + flat CSV + console summary.
+- `LeagueSettingsPage` (settings + team count), `DraftRankingsPage.readPreRank()`
+  — both verified against league 891808.
+- `npm run cheatsheet` (`--threshold`, `--pos`).
+
+**Real finding for this league:** early-round board matches ADP closely; the
+live disagreements are Yahoo's model fading QBs vs ADP (wait on QB) and a few
+WRs Yahoo rates above the room.
+
+**Not built:** `buildCheatSheet` / `renderReport` override path, `vor.ts` wiring,
+`ProjectionsPage` (removed), FantasyPros, features C and D.
