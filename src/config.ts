@@ -49,6 +49,13 @@ export interface Config {
   teamUrl: string;
   /** Absolute URL of the editable lineup page (optionally week-pinned). */
   lineupUrl: string;
+  /** Draft-prep pages. */
+  leagueSettingsUrl: string;
+  preRankUrl: string;
+  draftAnalysisUrl: string;
+  projectionsUrl: string;
+  /** Default abs(rank) gap to flag a draft override. */
+  overrideThreshold: number;
 }
 
 export function loadConfig(): Config {
@@ -67,6 +74,8 @@ export function loadConfig(): Config {
     ? `${baseUrl}/f1/${leagueId}/${teamId}/team?week=${week}`
     : `${baseUrl}/f1/${leagueId}/${teamId}/team`;
 
+  const overrideThreshold = optionalInt("DRAFT_OVERRIDE_THRESHOLD") ?? 10;
+
   return {
     leagueId,
     teamId,
@@ -77,5 +86,10 @@ export function loadConfig(): Config {
     projectRoot,
     teamUrl,
     lineupUrl,
+    leagueSettingsUrl: `${baseUrl}/f1/${leagueId}/settings`,
+    preRankUrl: `${baseUrl}/f1/${leagueId}/${teamId}/editprerank`,
+    draftAnalysisUrl: `${baseUrl}/f1/${leagueId}/draftanalysis`,
+    projectionsUrl: `${baseUrl}/f1/${leagueId}/players?status=A&sort=PTS&sdir=1&stat1=S_PS_2026`,
+    overrideThreshold,
   };
 }

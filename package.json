@@ -9,8 +9,9 @@
     "login": "tsx src/cli/login.ts",
     "roster": "tsx src/cli/show-roster.ts",
     "lineup": "tsx src/cli/set-lineup.ts",
+    "cheatsheet": "tsx src/cli/cheatsheet.ts",
     "test": "playwright test",
-    "test:unit": "playwright test tests/optimizer.spec.ts",
+    "test:unit": "playwright test tests/optimizer.spec.ts tests/vor.spec.ts tests/diff.spec.ts tests/report.spec.ts",
     "codegen": "playwright codegen https://football.fantasysports.yahoo.com",
     "typecheck": "tsc --noEmit"
   },
