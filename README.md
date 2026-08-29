@@ -61,7 +61,7 @@ Chrome dance.
 | --- | --- |
 | `npm run login:chrome` | Launch your real Chrome (debug port + dedicated profile) to sign in. |
 | `npm run login` | Attach to that Chrome (or fall back to a bundled browser) and save the session. |
-| `npm run cheatsheet` | Draft board: 300 players by ADP, snake-round tiers, flags where Yahoo's expert rank disagrees with ADP. Writes `artifacts/cheatsheet-<date>.{md,csv}`. Read-only. |
+| `npm run cheatsheet` | Draft board: 300 players by ADP, snake-round tiers, flags where Yahoo's expert rank disagrees with ADP. Writes `output/cheatsheet-<date>.{md,csv}`. Read-only. |
 | `npm run cheatsheet -- --threshold 25` | Stricter flag bar (default 18). |
 | `npm run cheatsheet -- --pos QB` | One position only. |
 | `npm run roster` | Print current roster: slot, player, projection, injury status. Read-only. |
@@ -116,7 +116,7 @@ npm run codegen    # click your real lineup page, copy better selectors
 
 Every selector is in the `SELECTORS` object at the top of `LineupPage.ts` with
 primary + fallback guesses. `readRoster()` and `applyPlan()` save page HTML and a
-screenshot to `artifacts/` when they can't find what they expect.
+screenshot to `output/` when they can't find what they expect.
 
 The flex rule is assumed to be `W/R/T` (RB/WR/TE eligible). If your league differs,
 edit `deriveEligibleSlots()` in `LineupPage.ts`.

@@ -34,9 +34,9 @@ export class TeamPage {
     }
   }
 
-  /** Save page HTML + screenshot to artifacts/ for selector debugging. */
+  /** Save page HTML + screenshot to output/ for selector debugging. */
   async dumpDebug(label: string): Promise<string> {
-    const dir = resolve(this.config.projectRoot, "artifacts");
+    const dir = this.config.outputDir;
     mkdirSync(dir, { recursive: true });
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const base = resolve(dir, `${label}-${stamp}`);

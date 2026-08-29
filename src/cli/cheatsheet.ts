@@ -43,7 +43,7 @@ async function main(): Promise<void> {
     const board = buildBoard(entries, { teams: league.teams, threshold, position: positionFilter });
     const { markdown, csv, summary } = renderBoard(board);
 
-    const dir = resolve(config.projectRoot, "artifacts");
+    const dir = config.outputDir;
     mkdirSync(dir, { recursive: true });
     const stamp = new Date().toISOString().slice(0, 10);
     const suffix = positionFilter ? `-${positionFilter.toLowerCase()}` : "";

@@ -49,6 +49,8 @@ export interface Config {
   teamUrl: string;
   /** Absolute URL of the editable lineup page (optionally week-pinned). */
   lineupUrl: string;
+  /** Where CLI output and debug dumps go (gitignored). */
+  outputDir: string;
   /** Draft-prep pages. */
   leagueSettingsUrl: string;
   preRankUrl: string;
@@ -82,6 +84,7 @@ export function loadConfig(): Config {
     storageStatePath,
     week,
     projectRoot,
+    outputDir: resolve(projectRoot, "output"),
     teamUrl,
     lineupUrl,
     leagueSettingsUrl: `${baseUrl}/f1/${leagueId}/settings`,

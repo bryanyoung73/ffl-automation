@@ -57,7 +57,7 @@ src/
   config.ts            .env loading (auto-creates from env.example) + derived URLs
   browser.ts           browser context from saved storageState
   pages/
-    TeamPage.ts             login-state checks, artifacts/ debug dumps
+    TeamPage.ts             login-state checks, output/ debug dumps
     LineupPage.ts           lineup selectors; roster scrape + submit (UNVERIFIED)
     LeagueSettingsPage.ts   settings + team count (verified)
     DraftRankingsPage.ts    editprerank scrape: rank/adp/xrank/bye/pos (verified)
@@ -95,13 +95,13 @@ tests/
   exist in the browser context (`ReferenceError: __name is not defined`).
 - `optimizer.ts`, `board.ts`, `vor.ts`, `diff.ts` stay pure (no Playwright
   imports). Test in isolation.
-- Never commit `.env`, `.auth/`, `artifacts/` (all gitignored). Generated cheat
-  sheets land in `artifacts/`.
+- Never commit `.env`, `.auth/`, `output/` (all gitignored). Generated cheat
+  sheets land in `output/`.
 - Commit only when the user asks.
 
 ## Next task (post-draft, lineup optimizer)
 
-User runs `npm run roster` and shares the output / an `artifacts/` dump. Then:
+User runs `npm run roster` and shares the output / an `output/` dump. Then:
 verify/fix `LineupPage` `SELECTORS`, confirm
 `readRoster()` returns real players with projections and correct slot codes, then
 validate `set-lineup --dry-run` before a live submit.

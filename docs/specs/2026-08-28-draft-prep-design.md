@@ -28,7 +28,7 @@ override sheet + a plain-English verdict. Read-only against Yahoo.
 Yahoo-only analysis with a pluggable `SignalProvider` interface. Pure-logic core
 (VOR, diff, report) with no Playwright imports, unit-tested against synthetic
 data. Scrapers follow the existing `LineupPage` pattern: all selectors in one
-object, `artifacts/` HTML+screenshot dump on a miss. Selectors are best guesses
+object, `output/` HTML+screenshot dump on a miss. Selectors are best guesses
 until verified against the real logged-in pages.
 
 ## Modules
@@ -114,7 +114,7 @@ Verdict:
 ## CLI
 
 ```
-npm run cheatsheet                     full run -> artifacts/cheatsheet-<date>.{md,csv}
+npm run cheatsheet                     full run -> output/cheatsheet-<date>.{md,csv}
 npm run cheatsheet -- --threshold 15   stricter override bar
 npm run cheatsheet -- --pos RB         restrict analysis to one position
 ```

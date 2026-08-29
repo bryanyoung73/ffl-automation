@@ -10,7 +10,7 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   reporter: [["list"], ["html", { open: "never" }]],
-  outputDir: "artifacts",
+  outputDir: "test-results",
   use: {
     baseURL: process.env.YAHOO_BASE_URL ?? "https://football.fantasysports.yahoo.com",
     headless,
