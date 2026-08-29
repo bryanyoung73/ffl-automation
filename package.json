@@ -1,0 +1,25 @@
+{
+  "name": "ffl-automation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Playwright automation for managing a Yahoo Fantasy Football team",
+  "type": "module",
+  "scripts": {
+    "login": "tsx src/cli/login.ts",
+    "roster": "tsx src/cli/show-roster.ts",
+    "lineup": "tsx src/cli/set-lineup.ts",
+    "test": "playwright test",
+    "test:unit": "playwright test tests/optimizer.spec.ts",
+    "codegen": "playwright codegen https://football.fantasysports.yahoo.com",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1",
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7"
+  }
+}
