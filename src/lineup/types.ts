@@ -30,6 +30,14 @@ export interface Player {
   currentSlot: string;
 }
 
+/** What a provider returns from a roster read: the players plus the current
+ *  starting slot codes in canonical order (bench/IR excluded). */
+export interface RosterReadResult {
+  players: Player[];
+  /** Slot codes of the current starting lineup, in table order. */
+  startingSlotCodes: string[];
+}
+
 export interface StartingSlot {
   /** Slot code, e.g. "QB", "RB", "W/R/T", "DEF". */
   code: string;

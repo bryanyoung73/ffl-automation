@@ -2,7 +2,7 @@
   "name": "ffl-automation",
   "version": "0.1.0",
   "private": true,
-  "description": "Playwright automation for managing a Yahoo Fantasy Football team",
+  "description": "Fantasy Football automation — Yahoo (Playwright) or ESPN (Fantasy v3 API) via a PROVIDER switch",
   "type": "module",
   "scripts": {
     "login:chrome": "tsx src/cli/launch-chrome.ts",
@@ -11,7 +11,7 @@
     "lineup": "tsx src/cli/set-lineup.ts",
     "cheatsheet": "tsx src/cli/cheatsheet.ts",
     "test": "playwright test",
-    "test:unit": "playwright test tests/optimizer.spec.ts tests/vor.spec.ts tests/diff.spec.ts tests/report.spec.ts tests/board.spec.ts",
+    "test:unit": "playwright test tests/optimizer.spec.ts tests/vor.spec.ts tests/diff.spec.ts tests/report.spec.ts tests/board.spec.ts tests/espn-maps.spec.ts tests/espn-league.spec.ts",
     "codegen": "playwright codegen https://football.fantasysports.yahoo.com",
     "typecheck": "tsc --noEmit"
   },

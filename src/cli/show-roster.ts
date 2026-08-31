@@ -1,18 +1,15 @@
 import { loadConfig } from "../config.js";
-import { openSession } from "../browser.js";
-import { LineupPage } from "../pages/LineupPage.js";
+import { getProvider } from "../providers/index.js";
 
 /**
  * Read-only: print the current roster with projections and status.
- * Useful for sanity-checking the scraper selectors before trusting `npm run lineup`.
+ * Useful for sanity-checking a provider before trusting `npm run lineup`.
  */
 async function main(): Promise<void> {
   const config = loadConfig();
-  const session = await openSession(config);
+  const provider = getProvider(config);
   try {
-    const lineup = new LineupPage(session.page, config);
-    await lineup.goto();
-    const { players, startingSlotCodes } = await lineup.readRoster();
+    const { players, startingSlotCodes } = await provider.getRoster(config.week);
 
     const rows = players
       .slice()
@@ -30,7 +27,7 @@ async function main(): Promise<void> {
     console.log(`Starting slots detected: ${startingSlotCodes.join(", ") || "(none)"}`);
     if (config.week) console.log(`Week: ${config.week}`);
   } finally {
-    await session.close();
+    await provider.close();
   }
 }
 

@@ -1,19 +1,39 @@
 # ffl-automation
 
-Playwright automation for a Yahoo Fantasy Football team (league `891808`, team
-`14` — <https://football.fantasysports.yahoo.com/f1/891808?mid=14>).
+Fantasy football automation with two back ends, chosen by `PROVIDER` in `.env`:
 
-- **`npm run cheatsheet`** — printable draft board from Yahoo's pre-rank page,
-  ordered by ADP with tiers, flagging where Yahoo's analysts disagree with the
-  draft room. Working.
-- **`npm run lineup`** — auto-optimize the weekly starting lineup from Yahoo's
-  projections. Built; selectors need a one-time tune against a real post-draft
-  roster.
+- **`PROVIDER=yahoo`** (default) — drives a real browser (Playwright) against
+  Yahoo. Needs a one-time manual login (below).
+- **`PROVIDER=espn`** — ESPN's Fantasy v3 JSON API over `fetch`. No browser;
+  private leagues just need two cookies in `.env`.
 
-The league is an **offline draft**, so the cheat sheet is a reference you print
-or open on a tablet — nothing is pushed back to Yahoo.
+Commands:
+
+- **`npm run cheatsheet`** — printable draft board ordered by ADP with tiers,
+  flagging where the source's expert rank disagrees with the draft room.
+- **`npm run roster`** — current roster with projections and injury status.
+- **`npm run lineup`** — optimize the weekly starting lineup from projections,
+  show a diff, confirm, submit (`--dry-run` to just print).
+
+Same code path for both providers — only the data source changes.
 
 ## How authentication works
+
+### ESPN (`PROVIDER=espn`)
+
+No browser. For a **private** league, copy two cookies from a browser that's
+logged in to <https://fantasy.espn.com> (DevTools → Application → Cookies) into
+`.env`:
+
+```
+ESPN_S2=<long url-encoded value>
+ESPN_SWID={XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX}
+```
+
+Also set `ESPN_LEAGUE_ID`, `ESPN_TEAM_ID`, `ESPN_SEASON`. A `401/403` from ESPN
+means those cookies are stale — grab fresh ones. Public leagues need no cookies.
+
+### Yahoo (`PROVIDER=yahoo`)
 
 There are **no credentials in this project.** You log in by hand once in a real
 browser; Playwright saves the resulting session (cookies + local storage) to
@@ -32,11 +52,14 @@ Yahoo sessions last a few weeks. When a command says the session expired, run
 
 ```bash
 npm install
-npx playwright install chromium
-cp env.example .env      # created automatically on first run too; edit if needed
+npx playwright install chromium   # Yahoo only
+cp env.example .env                # created automatically on first run too; edit if needed
 ```
 
-### Logging in (Google sign-in)
+Then set `PROVIDER` in `.env`. For ESPN, fill the `ESPN_*` block and you're done
+— skip the Chrome login below.
+
+### Logging in (Yahoo, Google sign-in)
 
 Google blocks OAuth in browsers that Playwright launches ("this browser may not
 be secure"). So the login step drives your **real installed Chrome** instead:
@@ -78,30 +101,40 @@ Chrome dance.
 
 | Var | Default | Notes |
 | --- | --- | --- |
-| `YAHOO_LEAGUE_ID` | `891808` | From your team URL. |
+| `PROVIDER` | `yahoo` | `yahoo` or `espn` — data source for every command. |
+| `YAHOO_LEAGUE_ID` | `891808` | From your team URL. Required when `PROVIDER=yahoo`. |
 | `YAHOO_TEAM_ID` | `14` | The `mid=` in your team URL. |
 | `YAHOO_BASE_URL` | `https://football.fantasysports.yahoo.com` | |
 | `HEADLESS` | `true` | `false` to watch `roster`/`lineup` run. `login` is always headed. |
-| `STORAGE_STATE_PATH` | `.auth/storageState.json` | Saved session location. |
-| `YAHOO_WEEK` | _(current)_ | Pin a week 1–18; blank = Yahoo's current week. |
+| `STORAGE_STATE_PATH` | `.auth/storageState.json` | Saved Yahoo session location. |
+| `YAHOO_WEEK` | _(current)_ | Pin a week 1–18; blank = provider's current week. |
+| `ESPN_LEAGUE_ID` | `1144783883` | `leagueId=` in your ESPN team URL. Required when `PROVIDER=espn`. |
+| `ESPN_TEAM_ID` | `5` | `teamId=` in your ESPN team URL. |
+| `ESPN_SEASON` | _(current year)_ | e.g. `2026`. |
+| `ESPN_S2` / `ESPN_SWID` | — | Cookies for a private league (see above). |
+| `ESPN_WEEK` | _(current)_ | Pin a week; falls back to `YAHOO_WEEK` then ESPN's current period. |
 
 ## Layout
 
 ```
 src/
-  config.ts            .env loading + derived URLs
-  browser.ts           browser context from the saved session
-  pages/
-    TeamPage.ts        login checks, debug dumps
-    LineupPage.ts      ALL Yahoo selectors; roster scraping + lineup submit
+  config.ts            .env loading; PROVIDER switch + per-provider vars
+  providers/
+    types.ts           LeagueProvider interface
+    index.ts           getProvider(config)
+    yahoo/             wraps the Playwright page objects
+    espn/              client.ts + maps.ts (pure) + EspnLeague.ts
+  browser.ts           browser context from the saved session (Yahoo)
+  pages/               ALL Yahoo selectors (TeamPage, LineupPage, ...)
   lineup/
     optimizer.ts       pure: roster + projections -> optimal legal lineup
-    types.ts
-  cli/
-    launch-chrome.ts  login.ts  show-roster.ts  set-lineup.ts  prompt.ts
+  draft/
+    board.ts  report.ts   pure: cheat-sheet builder + renderers
+  cli/                 provider-agnostic entry points
 tests/
-  optimizer.spec.ts    pure logic, no browser
-  lineup-page.spec.ts  live scrape check (auto-skips without a session)
+  *.spec.ts            pure logic, no browser
+  espn-*.spec.ts       ESPN maps + fixture mapping
+  fixtures/            sample ESPN payload
 ```
 
 ## Adjusting selectors

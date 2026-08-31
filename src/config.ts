@@ -37,7 +37,23 @@ function optionalInt(name: string): number | undefined {
   return n;
 }
 
+export type Provider = "yahoo" | "espn";
+
+export interface EspnConfig {
+  leagueId: string;
+  teamId: number;
+  season: number;
+  /** espn_s2 cookie value (private leagues). */
+  s2: string;
+  /** SWID cookie value, normalised to include the surrounding braces. */
+  swid: string;
+  readBaseUrl: string;
+  writeBaseUrl: string;
+}
+
 export interface Config {
+  /** Which data source every command talks to. */
+  provider: Provider;
   leagueId: string;
   teamId: string;
   baseUrl: string;
@@ -45,29 +61,71 @@ export interface Config {
   storageStatePath: string;
   week: number | undefined;
   projectRoot: string;
-  /** Absolute URL of the team's home page. */
+  /** Absolute URL of the team's home page (Yahoo). */
   teamUrl: string;
-  /** Absolute URL of the editable lineup page (optionally week-pinned). */
+  /** Absolute URL of the editable lineup page (Yahoo, optionally week-pinned). */
   lineupUrl: string;
   /** Where CLI output and debug dumps go (gitignored). */
   outputDir: string;
-  /** Draft-prep pages. */
+  /** Draft-prep pages (Yahoo). */
   leagueSettingsUrl: string;
   preRankUrl: string;
   /** Default abs(rank) gap to flag a draft-board disagreement. */
   overrideThreshold: number;
+  /** Present only when provider === "espn". */
+  espn?: EspnConfig;
+}
+
+function readProvider(): Provider {
+  const raw = (process.env.PROVIDER?.trim() || "yahoo").toLowerCase();
+  if (raw !== "yahoo" && raw !== "espn") {
+    throw new Error(`PROVIDER must be "yahoo" or "espn", got "${raw}".`);
+  }
+  return raw;
+}
+
+/** SWID must carry its braces in the Cookie header; add them if the user pasted it bare. */
+function normalizeSwid(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+  const inner = trimmed.replace(/^\{|\}$/g, "");
+  return `{${inner}}`;
+}
+
+function loadEspnConfig(): EspnConfig {
+  const leagueId = required("ESPN_LEAGUE_ID");
+  const teamId = optionalInt("ESPN_TEAM_ID");
+  if (teamId === undefined) {
+    throw new Error(`Missing required env var ESPN_TEAM_ID. Set it in .env (see env.example).`);
+  }
+  const season = optionalInt("ESPN_SEASON") ?? new Date().getFullYear();
+  const s2 = required("ESPN_S2");
+  const swid = normalizeSwid(required("ESPN_SWID"));
+  const root = `apis/v3/games/ffl/seasons/${season}/segments/0/leagues/${leagueId}`;
+  return {
+    leagueId,
+    teamId,
+    season,
+    s2,
+    swid,
+    readBaseUrl: `https://lm-api-reads.fantasy.espn.com/${root}`,
+    writeBaseUrl: `https://lm-api-writes.fantasy.espn.com/${root}`,
+  };
 }
 
 export function loadConfig(): Config {
-  const leagueId = required("YAHOO_LEAGUE_ID");
-  const teamId = required("YAHOO_TEAM_ID");
+  const provider = readProvider();
+
+  // Yahoo identifiers are only mandatory when Yahoo is the active provider.
+  const leagueId = provider === "yahoo" ? required("YAHOO_LEAGUE_ID") : process.env.YAHOO_LEAGUE_ID?.trim() ?? "";
+  const teamId = provider === "yahoo" ? required("YAHOO_TEAM_ID") : process.env.YAHOO_TEAM_ID?.trim() ?? "";
   const baseUrl = (process.env.YAHOO_BASE_URL?.trim() || "https://football.fantasysports.yahoo.com").replace(/\/$/, "");
   const headless = process.env.HEADLESS !== "false";
   const storageStatePath = resolve(
     projectRoot,
     process.env.STORAGE_STATE_PATH?.trim() || ".auth/storageState.json",
   );
-  const week = optionalInt("YAHOO_WEEK");
+  const week = optionalInt("YAHOO_WEEK") ?? optionalInt("ESPN_WEEK");
 
   const teamUrl = `${baseUrl}/f1/${leagueId}/${teamId}`;
   const lineupUrl = week
@@ -77,6 +135,7 @@ export function loadConfig(): Config {
   const overrideThreshold = optionalInt("DRAFT_OVERRIDE_THRESHOLD") ?? 18;
 
   return {
+    provider,
     leagueId,
     teamId,
     baseUrl,
@@ -90,5 +149,6 @@ export function loadConfig(): Config {
     leagueSettingsUrl: `${baseUrl}/f1/${leagueId}/settings`,
     preRankUrl: `${baseUrl}/f1/${leagueId}/${teamId}/editprerank`,
     overrideThreshold,
+    espn: provider === "espn" ? loadEspnConfig() : undefined,
   };
 }

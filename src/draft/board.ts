@@ -36,6 +36,8 @@ export interface Board {
   teams: number;
   threshold: number;
   positionFilter: Position | null;
+  /** Data source name for rendered headers/labels, e.g. "Yahoo" or "ESPN". */
+  sourceLabel: string;
   rows: BoardRow[];
   /** Count of rows where abs(yahooVsAdp) >= threshold. */
   disagreements: number;
@@ -58,6 +60,8 @@ export interface BuildBoardOptions {
   flagKickersAndDefense?: boolean;
   position?: Position | null;
   now?: Date;
+  /** Data source name for rendered headers/labels. Default "Yahoo". */
+  sourceLabel?: string;
 }
 
 const NON_FLAGGED_POSITIONS: ReadonlySet<Position> = new Set(["K", "DEF"]);
@@ -71,6 +75,7 @@ export function buildBoard(entries: readonly BoardEntry[], options: BuildBoardOp
   const teams = Math.max(1, options.teams);
   const threshold = options.threshold ?? 18;
   const positionFilter = options.position ?? null;
+  const sourceLabel = options.sourceLabel ?? "Yahoo";
   // Yahoo's XRank stops discriminating past ~pick 200 (it lumps deep players
   // into one low tier), so gaps out there are structural, not signal. Only flag
   // where both metrics are still ranking carefully — the first ~7 rounds.
@@ -126,21 +131,22 @@ export function buildBoard(entries: readonly BoardEntry[], options: BuildBoardOp
     teams,
     threshold,
     positionFilter,
+    sourceLabel,
     rows,
     disagreements,
-    verdict: verdict(disagreements, rows.length),
+    verdict: verdict(disagreements, rows.length, sourceLabel),
   };
 }
 
-export function verdict(disagreements: number, total: number): string {
+export function verdict(disagreements: number, total: number, sourceLabel = "Yahoo"): string {
   if (total === 0) return "No players on the board.";
   if (disagreements === 0) {
-    return "Yahoo's expert rank tracks ADP closely — the default board is fine as-is.";
+    return `${sourceLabel}'s expert rank tracks ADP closely — the default board is fine as-is.`;
   }
   if (disagreements <= 8) {
-    return `Mostly aligned with ADP; ${disagreements} player${disagreements === 1 ? "" : "s"} where Yahoo's rank is off — check the flagged rows.`;
+    return `Mostly aligned with ADP; ${disagreements} player${disagreements === 1 ? "" : "s"} where ${sourceLabel}'s rank is off — check the flagged rows.`;
   }
-  return `Yahoo's expert rank diverges from ADP on ${disagreements} players — worth a manual pass before you draft.`;
+  return `${sourceLabel}'s expert rank diverges from ADP on ${disagreements} players — worth a manual pass before you draft.`;
 }
 
 function sortKey(e: BoardEntry): number {

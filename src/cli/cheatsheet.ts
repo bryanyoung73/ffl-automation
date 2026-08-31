@@ -2,10 +2,8 @@ import { mkdirSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { loadConfig } from "../config.js";
-import { openSession } from "../browser.js";
-import { LeagueSettingsPage } from "../pages/LeagueSettingsPage.js";
-import { DraftRankingsPage } from "../pages/DraftRankingsPage.js";
-import { buildBoard, type BoardEntry } from "../draft/board.js";
+import { getProvider, providerLabel } from "../providers/index.js";
+import { buildBoard } from "../draft/board.js";
 import { renderBoard } from "../draft/report.js";
 import { POSITIONS, type Position } from "../draft/types.js";
 
@@ -23,24 +21,23 @@ async function main(): Promise<void> {
   const threshold = intFlag("threshold") ?? config.overrideThreshold;
   const positionFilter = posFlag();
 
-  const session = await openSession(config);
+  const provider = getProvider(config);
+  const sourceLabel = providerLabel(config);
   try {
     console.log("Reading league settings...");
-    const league = await new LeagueSettingsPage(session.page, config).read();
+    const league = await provider.getLeagueSettings();
     console.log(`  ${league.teams}-team ${league.scoring}`);
 
-    console.log("Reading Yahoo pre-rank board...");
-    const preRank = await new DraftRankingsPage(session.page, config).readPreRank();
-    console.log(`  ${preRank.length} players (${preRank.filter((p) => p.adp != null).length} with ADP)`);
+    console.log(`Reading ${sourceLabel} draft board...`);
+    const entries = await provider.getDraftBoard();
+    console.log(`  ${entries.length} players (${entries.filter((p) => p.adp != null).length} with ADP)`);
 
-    const entries: BoardEntry[] = preRank.map((p) => ({
-      player: { id: p.id, name: p.name, position: p.position, team: p.team, bye: p.bye },
-      xRank: p.xRank,
-      adp: p.adp,
-      listRank: p.listRank,
-    }));
-
-    const board = buildBoard(entries, { teams: league.teams, threshold, position: positionFilter });
+    const board = buildBoard(entries, {
+      teams: league.teams,
+      threshold,
+      position: positionFilter,
+      sourceLabel,
+    });
     const { markdown, csv, summary } = renderBoard(board);
 
     const dir = config.outputDir;
@@ -56,7 +53,7 @@ async function main(): Promise<void> {
     console.log(`Wrote ${mdPath}`);
     console.log(`Wrote ${csvPath}`);
   } finally {
-    await session.close();
+    await provider.close();
   }
 }
 

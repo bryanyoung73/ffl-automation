@@ -1,8 +1,10 @@
 import type { Page } from "@playwright/test";
 import type { Config } from "../config.js";
 import { TeamPage } from "./TeamPage.js";
-import type { LineupPlan, Player, PlayerStatus } from "../lineup/types.js";
+import type { LineupPlan, Player, PlayerStatus, RosterReadResult } from "../lineup/types.js";
 import { slotLabel } from "../lineup/optimizer.js";
+
+export type { RosterReadResult } from "../lineup/types.js";
 
 /**
  * All Yahoo-specific selectors live here. Yahoo ships no stable test ids, so
@@ -49,12 +51,6 @@ const STATUS_MAP: Record<string, PlayerStatus> = {
   NA: "NA",
   BYE: "BYE",
 };
-
-export interface RosterReadResult {
-  players: Player[];
-  /** Slot codes of the current starting lineup, in table order. */
-  startingSlotCodes: string[];
-}
 
 export class LineupPage extends TeamPage {
   constructor(page: Page, config: Config) {

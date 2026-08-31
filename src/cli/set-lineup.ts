@@ -1,6 +1,5 @@
 import { loadConfig } from "../config.js";
-import { openSession } from "../browser.js";
-import { LineupPage } from "../pages/LineupPage.js";
+import { getProvider, providerLabel } from "../providers/index.js";
 import { diffLineup, optimizeLineup, slotLabel } from "../lineup/optimizer.js";
 import { confirm, hasFlag } from "./prompt.js";
 
@@ -20,12 +19,10 @@ async function main(): Promise<void> {
   const skipPrompt = hasFlag("yes");
   const pinnedPlayerIds = collectPins();
 
-  const session = await openSession(config);
+  const provider = getProvider(config);
+  const label = providerLabel(config);
   try {
-    const lineup = new LineupPage(session.page, config);
-    await lineup.goto();
-
-    const { players, startingSlotCodes } = await lineup.readRoster();
+    const { players, startingSlotCodes } = await provider.getRoster(config.week);
     if (startingSlotCodes.length === 0) {
       throw new Error("No starting slots detected — cannot optimize. Check `npm run roster`.");
     }
@@ -44,15 +41,15 @@ async function main(): Promise<void> {
       console.log("\n--dry-run: not submitting.");
       return;
     }
-    if (!skipPrompt && !(await confirm("\nSubmit these changes to Yahoo?"))) {
+    if (!skipPrompt && !(await confirm(`\nSubmit these changes to ${label}?`))) {
       console.log("Aborted.");
       return;
     }
 
-    await lineup.applyPlan(plan, { dryRun: false });
+    await provider.applyLineup(plan, { dryRun: false });
     console.log("Lineup submitted.");
   } finally {
-    await session.close();
+    await provider.close();
   }
 }
 

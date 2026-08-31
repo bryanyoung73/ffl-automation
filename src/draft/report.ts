@@ -7,19 +7,23 @@ export interface RenderedBoard {
   summary: string;
 }
 
-const NOTE_LABEL: Record<BoardRow["note"], string> = {
-  "": "",
-  "yahoo-hot": "Yahoo ranks earlier than ADP",
-  "yahoo-cold": "Yahoo ranks later than ADP",
-};
+function noteLabels(src: string): Record<BoardRow["note"], string> {
+  return {
+    "": "",
+    "yahoo-hot": `${src} ranks earlier than ADP`,
+    "yahoo-cold": `${src} ranks later than ADP`,
+  };
+}
 
 /** Printable draft board: tiers as sections, plus a flat CSV. */
 export function renderBoard(board: Board): RenderedBoard {
+  const src = board.sourceLabel || "Yahoo";
+  const NOTE_LABEL = noteLabels(src);
   const scope = board.positionFilter ? ` — ${board.positionFilter}` : "";
   const lines: string[] = [
     `# Draft cheat sheet${scope}`,
     "",
-    `_${board.generatedAt}_ · ${board.teams}-team · ordered by ADP (fallback XRank)`,
+    `_${board.generatedAt}_ · ${board.teams}-team · ordered by ADP (fallback ${src} rank)`,
     "",
     `**${board.verdict}**`,
     "",
@@ -33,7 +37,7 @@ export function renderBoard(board: Board): RenderedBoard {
         "",
         `## Tier ${currentTier}  (picks ${(currentTier - 1) * board.teams + 1}–${currentTier * board.teams})`,
         "",
-        "| # | Player | Pos | Team | Bye | ADP | Yahoo | Flag |",
+        `| # | Player | Pos | Team | Bye | ADP | ${src} | Flag |`,
         "| ---: | --- | --- | --- | ---: | ---: | ---: | --- |",
       );
     }
@@ -72,17 +76,18 @@ function boardCsv(rows: BoardRow[]): string {
 }
 
 function boardSummary(board: Board): string {
+  const src = board.sourceLabel || "Yahoo";
   const flagged = board.rows
     .filter((r) => r.note !== "")
     .sort((a, b) => Math.abs(b.yahooGap ?? 0) - Math.abs(a.yahooGap ?? 0))
     .slice(0, 12);
   const lines = [board.verdict];
   if (flagged.length) {
-    lines.push("", "Where Yahoo's experts most disagree with ADP (early picks):");
+    lines.push("", `Where ${src}'s expert rank most disagrees with ADP (early picks):`);
     for (const r of flagged) {
-      const dir = r.note === "yahoo-hot" ? "Yahoo higher" : "Yahoo lower";
+      const dir = r.note === "yahoo-hot" ? `${src} higher` : `${src} lower`;
       lines.push(
-        `  board #${r.rank} ${r.player.name} (${r.player.position}) — ADP ${fmt(r.adp)}, Yahoo expert ~#${r.yahooExpertPos}  [${dir} by ${Math.abs(r.yahooGap ?? 0)}]`,
+        `  board #${r.rank} ${r.player.name} (${r.player.position}) — ADP ${fmt(r.adp)}, ${src} expert ~#${r.yahooExpertPos}  [${dir} by ${Math.abs(r.yahooGap ?? 0)}]`,
       );
     }
   }

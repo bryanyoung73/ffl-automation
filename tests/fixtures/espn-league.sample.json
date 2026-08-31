@@ -1,0 +1,216 @@
+{
+  "_comment": "Hand-built minimal ESPN Fantasy v3 payload for unit tests. Replace with a real dump (curl ...?view=mSettings&view=mRoster&view=mTeam) to calibrate maps.ts against your league.",
+  "scoringPeriodId": 1,
+  "settings": {
+    "size": 10,
+    "rosterSettings": {
+      "lineupSlotCounts": {
+        "0": 1, "2": 2, "4": 2, "6": 1, "23": 1, "17": 1, "16": 1, "20": 6, "21": 1
+      }
+    },
+    "scoringSettings": {
+      "scoringItems": [
+        { "statId": 53, "points": 1 },
+        { "statId": 3, "points": 0.04 }
+      ]
+    },
+    "draftSettings": { "type": "SNAKE" }
+  },
+  "teams": [
+    {
+      "id": 5,
+      "roster": {
+        "entries": [
+          {
+            "playerId": 3139477,
+            "lineupSlotId": 0,
+            "playerPoolEntry": {
+              "player": {
+                "id": 3139477,
+                "fullName": "Patrick Mahomes",
+                "defaultPositionId": 1,
+                "proTeamId": 12,
+                "eligibleSlots": [0, 20, 21],
+                "injuryStatus": "ACTIVE",
+                "stats": [
+                  { "statSourceId": 1, "statSplitTypeId": 1, "scoringPeriodId": 1, "appliedTotal": 22.4 },
+                  { "statSourceId": 0, "statSplitTypeId": 1, "scoringPeriodId": 1, "appliedTotal": 0 },
+                  { "statSourceId": 1, "statSplitTypeId": 0, "appliedTotal": 388.1 }
+                ]
+              }
+            }
+          },
+          {
+            "playerId": 111,
+            "lineupSlotId": 2,
+            "playerPoolEntry": {
+              "player": {
+                "id": 111,
+                "fullName": "Slow Back",
+                "defaultPositionId": 2,
+                "proTeamId": 8,
+                "eligibleSlots": [2, 3, 23, 20, 21],
+                "injuryStatus": "ACTIVE",
+                "stats": [
+                  { "statSourceId": 1, "statSplitTypeId": 1, "scoringPeriodId": 1, "appliedTotal": 8 }
+                ]
+              }
+            }
+          },
+          {
+            "playerId": 222,
+            "lineupSlotId": 20,
+            "playerPoolEntry": {
+              "player": {
+                "id": 222,
+                "fullName": "Fast Back",
+                "defaultPositionId": 2,
+                "proTeamId": 14,
+                "eligibleSlots": [2, 3, 23, 20, 21],
+                "injuryStatus": "QUESTIONABLE",
+                "stats": [
+                  { "statSourceId": 1, "statSplitTypeId": 1, "scoringPeriodId": 1, "appliedTotal": 17 }
+                ]
+              }
+            }
+          },
+          {
+            "playerId": 333,
+            "lineupSlotId": 16,
+            "playerPoolEntry": {
+              "player": {
+                "id": 333,
+                "fullName": "Chicago D/ST",
+                "defaultPositionId": 16,
+                "proTeamId": 3,
+                "eligibleSlots": [16, 20, 21],
+                "injuryStatus": "ACTIVE",
+                "stats": [
+                  { "statSourceId": 1, "statSplitTypeId": 1, "scoringPeriodId": 1, "appliedTotal": 7.5 }
+                ]
+              }
+            }
+          },
+          {
+            "playerId": 444,
+            "lineupSlotId": 21,
+            "playerPoolEntry": {
+              "player": {
+                "id": 444,
+                "fullName": "Hurt Guy",
+                "defaultPositionId": 4,
+                "proTeamId": 21,
+                "eligibleSlots": [6, 23, 20, 21],
+                "injuryStatus": "INJURY_RESERVE",
+                "stats": []
+              }
+            }
+          },
+          {
+            "playerId": 501,
+            "lineupSlotId": 4,
+            "playerPoolEntry": {
+              "player": {
+                "id": 501, "fullName": "Wide One", "defaultPositionId": 3, "proTeamId": 26,
+                "eligibleSlots": [4, 23, 20, 21], "injuryStatus": "ACTIVE",
+                "stats": [{ "statSourceId": 1, "statSplitTypeId": 1, "scoringPeriodId": 1, "appliedTotal": 12 }]
+              }
+            }
+          },
+          {
+            "playerId": 502,
+            "lineupSlotId": 4,
+            "playerPoolEntry": {
+              "player": {
+                "id": 502, "fullName": "Wide Two", "defaultPositionId": 3, "proTeamId": 27,
+                "eligibleSlots": [4, 23, 20, 21], "injuryStatus": "ACTIVE",
+                "stats": [{ "statSourceId": 1, "statSplitTypeId": 1, "scoringPeriodId": 1, "appliedTotal": 11 }]
+              }
+            }
+          },
+          {
+            "playerId": 503,
+            "lineupSlotId": 6,
+            "playerPoolEntry": {
+              "player": {
+                "id": 503, "fullName": "Tight End", "defaultPositionId": 4, "proTeamId": 9,
+                "eligibleSlots": [6, 23, 20, 21], "injuryStatus": "ACTIVE",
+                "stats": [{ "statSourceId": 1, "statSplitTypeId": 1, "scoringPeriodId": 1, "appliedTotal": 9 }]
+              }
+            }
+          },
+          {
+            "playerId": 504,
+            "lineupSlotId": 23,
+            "playerPoolEntry": {
+              "player": {
+                "id": 504, "fullName": "Flex Guy", "defaultPositionId": 3, "proTeamId": 11,
+                "eligibleSlots": [4, 23, 20, 21], "injuryStatus": "ACTIVE",
+                "stats": [{ "statSourceId": 1, "statSplitTypeId": 1, "scoringPeriodId": 1, "appliedTotal": 10 }]
+              }
+            }
+          },
+          {
+            "playerId": 505,
+            "lineupSlotId": 17,
+            "playerPoolEntry": {
+              "player": {
+                "id": 505, "fullName": "Toe Baller", "defaultPositionId": 5, "proTeamId": 12,
+                "eligibleSlots": [17, 20, 21], "injuryStatus": "ACTIVE",
+                "stats": [{ "statSourceId": 1, "statSplitTypeId": 1, "scoringPeriodId": 1, "appliedTotal": 8 }]
+              }
+            }
+          }
+        ]
+      }
+    },
+    { "id": 7, "roster": { "entries": [] } }
+  ],
+  "players": [
+    {
+      "id": 3139477,
+      "player": {
+        "id": 3139477,
+        "fullName": "Patrick Mahomes",
+        "defaultPositionId": 1,
+        "proTeamId": 12,
+        "byeWeek": 10,
+        "eligibleSlots": [0, 20, 21],
+        "ownership": { "averageDraftPosition": 28.4 },
+        "draftRanksByRankType": {
+          "STANDARD": { "rank": 30 },
+          "PPR": { "rank": 33 }
+        }
+      }
+    },
+    {
+      "id": 4241389,
+      "player": {
+        "id": 4241389,
+        "fullName": "Bijan Robinson",
+        "defaultPositionId": 2,
+        "proTeamId": 1,
+        "byeWeek": 5,
+        "eligibleSlots": [2, 3, 23, 20, 21],
+        "ownership": { "averageDraftPosition": 2.1 },
+        "draftRanksByRankType": {
+          "STANDARD": { "rank": 3 },
+          "PPR": { "rank": 2 }
+        }
+      }
+    },
+    {
+      "id": 999,
+      "player": {
+        "id": 999,
+        "fullName": "Undrafted Rookie",
+        "defaultPositionId": 3,
+        "proTeamId": 0,
+        "byeWeek": 0,
+        "eligibleSlots": [4, 23, 20, 21],
+        "ownership": { "averageDraftPosition": 0 },
+        "draftRanksByRankType": {}
+      }
+    }
+  ]
+}

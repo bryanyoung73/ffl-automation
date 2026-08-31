@@ -4,13 +4,27 @@ Context for AI assistants working in this repo.
 
 ## What this is
 
-Playwright + TypeScript automation for a Yahoo Fantasy Football team
-(league `891808`, team `14`). Two features:
-1. **Draft cheat sheet** (`npm run cheatsheet`) — shipped, verified live.
-2. **Weekly lineup optimizer** (`npm run lineup`) — built, selectors unverified,
-   blocked until there's a post-draft roster.
+TypeScript automation for a fantasy football team. Two features:
+1. **Draft cheat sheet** (`npm run cheatsheet`) — shipped, verified live (Yahoo).
+2. **Weekly lineup optimizer** (`npm run lineup`) — built; Yahoo selectors
+   unverified.
 
 Stack: `@playwright/test`, `tsx` for CLIs, ESM, strict TS. No framework.
+
+## Providers
+
+`PROVIDER` in `.env` (`yahoo` default | `espn`) picks the data source for every
+command. Both implement `LeagueProvider` (`src/providers/types.ts`) and return
+the same provider-agnostic shapes, so `draft/` and `lineup/` never branch on it.
+
+- **yahoo** (`src/providers/yahoo/YahooLeague.ts`) — the original path: wraps
+  `browser.ts` + `pages/*`, no behaviour change. Needs the Chrome login (below).
+- **espn** (`src/providers/espn/`) — ESPN's unofficial Fantasy v3 JSON API over
+  `fetch`. No browser. Private leagues need `ESPN_S2` + `ESPN_SWID` cookies in
+  `.env` (copy from a logged-in browser). Id/scoring/projection mapping is in
+  pure, unit-tested `maps.ts` + the exported mappers in `EspnLeague.ts`; the
+  write path (`applyLineup` → `POST transactions/`) is unofficial, so
+  `--dry-run` first. See `docs/specs/2026-08-31-espn-api-provider.md`.
 
 ## Current status (2026-08-29)
 
@@ -33,8 +47,12 @@ Stack: `@playwright/test`, `tsx` for CLIs, ESM, strict TS. No framework.
 
 ## Auth model
 
-No credentials in the repo. Google blocks OAuth in Playwright-launched browsers,
-so login drives the user's real installed Chrome:
+**ESPN** (`PROVIDER=espn`): no browser. Put `ESPN_S2` + `ESPN_SWID` (from a
+browser logged in to fantasy.espn.com) in `.env`. `EspnClient` sends them as a
+Cookie header; a 401/403 prints a "check ESPN_S2 / ESPN_SWID" message.
+
+**Yahoo** (`PROVIDER=yahoo`): no credentials in the repo. Google blocks OAuth in
+Playwright-launched browsers, so login drives the user's real installed Chrome:
 
 1. `npm run login:chrome` — spawns real Chrome with `--remote-debugging-port`
    and a dedicated profile at `.auth/chrome-profile/` (gitignored). User signs
@@ -54,8 +72,16 @@ the Yahoo form directly and skip the Chrome dance — not done yet.
 
 ```
 src/
-  config.ts            .env loading (auto-creates from env.example) + derived URLs
-  browser.ts           browser context from saved storageState
+  config.ts            .env loading (auto-creates from env.example); PROVIDER
+                       switch, Yahoo vars + derived URLs, ESPN_* -> EspnConfig
+  providers/
+    types.ts               LeagueProvider interface
+    index.ts               getProvider(config) / providerLabel(config)
+    yahoo/YahooLeague.ts    wraps browser.ts + pages/* (no behaviour change)
+    espn/client.ts          fetch wrapper: cookies, x-fantasy-filter, errors
+    espn/maps.ts            PURE: id<->code maps, scoring + projection helpers
+    espn/EspnLeague.ts      provider impl + exported pure mappers
+  browser.ts           browser context from saved storageState (Yahoo only)
   pages/
     TeamPage.ts             login-state checks, output/ debug dumps
     LineupPage.ts           lineup selectors; roster scrape + submit (UNVERIFIED)
@@ -70,18 +96,19 @@ src/
     types.ts
     vor.ts  diff.ts     PURE, unit-tested, v2 — NOT wired
     signals/            SignalProvider interface + FantasyPros stub — v2
-  cli/
-    launch-chrome.ts   `npm run login:chrome`
-    login.ts           `npm run login` (CDP attach or fallback)
-    show-roster.ts     `npm run roster` (read-only, unverified)
-    set-lineup.ts      `npm run lineup` (unverified)
+  cli/                 provider-agnostic: loadConfig() -> getProvider(config)
+    launch-chrome.ts   `npm run login:chrome` (Yahoo)
+    login.ts           `npm run login` (Yahoo; CDP attach or fallback)
+    show-roster.ts     `npm run roster` (read-only)
+    set-lineup.ts      `npm run lineup`
     cheatsheet.ts      `npm run cheatsheet` (--threshold / --pos) — SHIPPED
     prompt.ts
 tests/
   optimizer.spec.ts  vor.spec.ts  diff.spec.ts  report.spec.ts  board.spec.ts
-                       pure logic, no browser (36 tests)
+  espn-maps.spec.ts  espn-league.spec.ts   pure logic, no browser
+  fixtures/espn-league.sample.json          hand-built; swap for a real dump
   lineup-page.spec.ts  draft-rankings-page.spec.ts
-                       live checks, auto-skip without a session
+                       live Yahoo checks, auto-skip without a session
 ```
 
 ## Conventions
@@ -93,8 +120,12 @@ tests/
 - Functions passed to `page.evaluate` must be top-level declarations with NO
   nested named functions — `tsx`/esbuild injects `__name()` helpers that don't
   exist in the browser context (`ReferenceError: __name is not defined`).
-- `optimizer.ts`, `board.ts`, `vor.ts`, `diff.ts` stay pure (no Playwright
-  imports). Test in isolation.
+- `optimizer.ts`, `board.ts`, `vor.ts`, `diff.ts`, and `providers/espn/maps.ts`
+  + the exported mappers in `EspnLeague.ts` stay pure (no Playwright / no
+  `fetch`). Test in isolation against fixtures.
+- ESPN id/slot/scoring maps in `maps.ts` are seeded from the community
+  `espn-api` constants — calibrate against a real league dump before trusting
+  them (`defaultPositionId` scheme is the usual first fix).
 - Never commit `.env`, `.auth/`, `output/` (all gitignored). Generated cheat
   sheets land in `output/`.
 - Commit only when the user asks.
