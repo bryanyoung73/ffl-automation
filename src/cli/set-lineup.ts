@@ -36,8 +36,12 @@ async function main(): Promise<void> {
     printPlan(plan, startingSlotCodes);
     printDiff(diff);
 
-    if (diff.changes.length === 0) {
-      console.log("\nLineup is already optimal. Nothing to do.");
+    if (!diff.needsSubmit) {
+      console.log(
+        diff.changes.length === 0
+          ? "\nLineup is already optimal. Nothing to do."
+          : "\nLineup is already optimal (proposed moves are cosmetic slot swaps). Nothing to submit.",
+      );
       return;
     }
     if (dryRun) {

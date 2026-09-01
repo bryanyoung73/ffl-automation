@@ -12,24 +12,24 @@ Playwright + TypeScript automation for a Yahoo Fantasy Football team
 
 Stack: `@playwright/test`, `tsx` for CLIs, ESM, strict TS. No framework.
 
-## Current status (2026-08-29)
+## Current status (2026-09-01)
 
-- **League is an Offline Draft.** Drafted off Yahoo, results keyed in after.
-  Nothing consumes `editprerank`, so there's no "push my rankings to Yahoo" —
-  the cheat sheet is a printable/CSV reference.
+- **Draft is complete.** League is an Offline Draft (was drafted off Yahoo).
+- **Lineup optimizer — WORKING, verified live.** `npm run roster` and
+  `npm run lineup --dry-run` run clean against the real roster.
+  `src/pages/LineupPage.ts` rewritten for Yahoo's classic team editor: anchors on
+  `select[name="<playerId>"]` (option values = eligible slots + BN; selected =
+  current slot). `config.lineupUrl` pins `?stat1=P&stat2=PW` for weekly
+  projections. `applyPlan()` (real submit) is written but **not yet run against
+  live Yahoo** — needs a real lineup change to verify the Save step.
+- **Draft cheat sheet — spent.** `editprerank` returns "There was a problem"
+  post-draft; `DraftRankingsPage.readPreRank()` throws `PRERANK_UNAVAILABLE` with
+  a friendly message and the live test skips. The `board.ts` / `renderBoard`
+  code stays for next season's draft.
 - **A valid login session exists** at `.auth/storageState.json` (Google via the
-  CDP-Chrome flow). `npm run cheatsheet` works end to end against live Yahoo.
-- **Draft cheat sheet — DONE.** `LeagueSettingsPage` + `DraftRankingsPage`
-  verified against league 891808. `src/draft/board.ts` (pure) + `renderBoard()`
-  in `report.ts`. 36 unit tests pass.
-- **Lineup optimizer — selectors still unverified.** `src/pages/LineupPage.ts`
-  `SELECTORS` are best guesses; tune against the real roster DOM after the draft.
-  `applyPlan()` assumes the classic per-row `<select>` UI.
-- **Deferred (v2 building blocks, tested but NOT wired):** `src/draft/vor.ts`,
-  `src/draft/diff.ts`, the `buildCheatSheet`/`renderReport` override path in
-  `report.ts`, `src/draft/signals/`. These need Yahoo projected points, which
-  only load on per-row expand on `editprerank` (300 clicks) — a separate
-  projections scrape is the v2 task.
+  CDP-Chrome flow).
+- **Deferred (v2, tested, NOT wired):** `src/draft/vor.ts`, `src/draft/diff.ts`,
+  the override renderers in `report.ts`, `src/draft/signals/`.
 
 ## Auth model
 
@@ -58,9 +58,9 @@ src/
   browser.ts           browser context from saved storageState
   pages/
     TeamPage.ts             login-state checks, output/ debug dumps
-    LineupPage.ts           lineup selectors; roster scrape + submit (UNVERIFIED)
+    LineupPage.ts           classic team editor: roster scrape (verified) + submit
     LeagueSettingsPage.ts   settings + team count (verified)
-    DraftRankingsPage.ts    editprerank scrape: rank/adp/xrank/bye/pos (verified)
+    DraftRankingsPage.ts    editprerank scrape (verified pre-draft; 404s post-draft)
   lineup/
     optimizer.ts       PURE branch-and-bound lineup optimizer, unit-tested
     types.ts
@@ -99,9 +99,12 @@ tests/
   sheets land in `output/`.
 - Commit only when the user asks.
 
-## Next task (post-draft, lineup optimizer)
+## Next task
 
-User runs `npm run roster` and shares the output / an `output/` dump. Then:
-verify/fix `LineupPage` `SELECTORS`, confirm
-`readRoster()` returns real players with projections and correct slot codes, then
-validate `set-lineup --dry-run` before a live submit.
+`applyPlan()` — the real lineup submit — has not run against live Yahoo yet.
+Next time the optimizer actually wants a change (start-set differs, not just a
+cosmetic slot swap), run `npm run lineup` for real and confirm the Save step
+works: `SELECTORS.saveButton` tries `button.roster-save-btn` /
+`button:has-text("Save Changes")` / `input[name="jsubmit"]`. The classic page's
+save control was only seen as `<input type="hidden" name="jsubmit">` in the dump,
+so the visible button selector may need adjusting.

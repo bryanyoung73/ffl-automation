@@ -56,6 +56,8 @@ export interface LineupChange {
 
 export interface LineupDiff {
   changes: LineupChange[];
+  /** True only when the set of starters changes (not just slot labels). */
+  needsSubmit: boolean;
   currentProjected: number;
   proposedProjected: number;
   /** proposedProjected - currentProjected */

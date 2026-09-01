@@ -92,31 +92,27 @@ src/
   config.ts            .env loading + derived URLs
   browser.ts           browser context from the saved session
   pages/
-    TeamPage.ts        login checks, debug dumps
-    LineupPage.ts      ALL Yahoo selectors; roster scraping + lineup submit
-  lineup/
-    optimizer.ts       pure: roster + projections -> optimal legal lineup
-    types.ts
-  cli/
-    launch-chrome.ts  login.ts  show-roster.ts  set-lineup.ts  prompt.ts
-tests/
-  optimizer.spec.ts    pure logic, no browser
-  lineup-page.spec.ts  live scrape check (auto-skips without a session)
+    TeamPage.ts             login checks, output/ debug dumps
+    LineupPage.ts           classic team editor: roster scrape + lineup submit
+    LeagueSettingsPage.ts   league settings + team count
+    DraftRankingsPage.ts    editprerank scrape (pre-draft only)
+  lineup/optimizer.ts  pure: roster + projections -> optimal legal lineup
+  draft/board.ts       pure: pre-rank data -> ADP-ordered tiered cheat sheet
+  draft/report.ts      pure: renderBoard() markdown + csv
+  cli/                 launch-chrome, login, show-roster, set-lineup,
+                       cheatsheet, prompt
+tests/                 *.spec.ts — pure logic (no browser) + live checks
+                       that auto-skip without a session
 ```
 
 ## Adjusting selectors
 
-Yahoo ships no stable test IDs, so `src/pages/LineupPage.ts` starts with
-**best-guess selectors**. After your first `npm run login`:
+Yahoo ships no stable test IDs and its class names rotate, so the page objects
+anchor on structural hooks (`select[name]`, `data-pos`, ARIA attributes, column
+order). If a scrape breaks after a Yahoo redesign, `readRoster()` /
+`readPreRank()` dump the page HTML + a screenshot to `output/`; `npm run codegen`
+opens Playwright's inspector against Yahoo to find new anchors.
 
-```bash
-npm run roster     # see what the current selectors scrape
-npm run codegen    # click your real lineup page, copy better selectors
-```
-
-Every selector is in the `SELECTORS` object at the top of `LineupPage.ts` with
-primary + fallback guesses. `readRoster()` and `applyPlan()` save page HTML and a
-screenshot to `output/` when they can't find what they expect.
-
-The flex rule is assumed to be `W/R/T` (RB/WR/TE eligible). If your league differs,
-edit `deriveEligibleSlots()` in `LineupPage.ts`.
+Eligible slots and the current slot come straight from each player's
+`<select>` options, so flex rules (`W/R/T`, `W/R`, `Q/W/R/T`, …) are picked up
+automatically — no config needed.

@@ -130,6 +130,7 @@ test("diffLineup reports only real moves and the projection swing", () => {
   const plan = optimizeLineup(players, ["RB"]);
   const diff = diffLineup(players, plan);
   expect(diff.changes).toHaveLength(2);
+  expect(diff.needsSubmit).toBe(true);
   expect(diff.currentProjected).toBe(10);
   expect(diff.proposedProjected).toBe(20);
   expect(diff.delta).toBe(10);
@@ -141,5 +142,18 @@ test("diffLineup is empty when the lineup is already optimal", () => {
     player({ id: "b", name: "Backup", position: "QB", projectedPoints: 10, currentSlot: "BN" }),
   ];
   const plan = optimizeLineup(players, ["QB"]);
-  expect(diffLineup(players, plan).changes).toHaveLength(0);
+  const diff = diffLineup(players, plan);
+  expect(diff.changes).toHaveLength(0);
+  expect(diff.needsSubmit).toBe(false);
+});
+
+test("diffLineup: pure slot-label reshuffle among the same starters needs no submit", () => {
+  const players = [
+    player({ id: "a", name: "Flex Guy", position: "WR", eligibleSlots: ["WR", "W/R/T"], projectedPoints: 12, currentSlot: "WR" }),
+    player({ id: "b", name: "Other WR", position: "WR", eligibleSlots: ["WR", "W/R/T"], projectedPoints: 11, currentSlot: "W/R/T" }),
+  ];
+  const plan = optimizeLineup(players, ["WR", "W/R/T"]);
+  const diff = diffLineup(players, plan);
+  expect(diff.needsSubmit).toBe(false);
+  expect(diff.delta).toBe(0);
 });
