@@ -1,7 +1,7 @@
 # Player intel: a shared chatter/news signal for draft + weekly
 
 Date: 2026-09-02
-Status: approved (design); not started
+Status: Phase 1 shipped; Phases 2–4 not started
 
 ## Problem
 
@@ -140,3 +140,34 @@ reproducible and cheap.
 - Impact scoring: hand-rules per signal type first; revisit a learned weighting
   only if the hand-rules feel off after a few weeks.
 - Cache TTL tuning during game week (practice reports land Wed–Fri).
+
+---
+
+## Addendum — Phase 1 shipped (2026-09-02)
+
+Built: `src/intel/` (`types.ts`, `cache.ts`, `match.ts`, `apply.ts`,
+`collect.ts`, `weekly.ts`, `providers/sleeper.ts`, `providers/espnNews.ts`),
+`src/cli/intel.ts` (`npm run intel`), wired into `roster` + `lineup` via
+`applyWeeklyIntel`. `--no-intel` / `--refresh` on all three. Bundle cached to
+`.cache/intel-<season>-wk<week>.json` (6 h TTL); the Sleeper player dump to
+`.cache/sleeper-players.json` (24 h). 22 unit tests (match / apply / espn-news).
+
+Verified live against Sleeper + ESPN news for real players:
+- **Sleeper is the workhorse.** `injury_status` + `injury_body_part` +
+  `practice_participation` + `injury_notes` + trending adds all flow. Name+team
+  join hit every skill player tried.
+- **ESPN news is noisy.** Half the "player news" feed is roundup articles
+  ("Do Draft list", "sleepers & breakouts") that only mention the player.
+  Fixed with `isPlayerBlurb()` — impact only scores when the headline *leads*
+  with the player's surname (beat-writer style); roundups become notes-only.
+  Even so, keyword scoring stays deliberately timid — real extraction is
+  Phase 3.
+- Net effect example: Mahomes "Questionable (knee)" from Sleeper (−0.7) + an
+  ESPN blurb "on track to start Week 1" (+0.7) → net 0 week adjustment, +0.2
+  season. Reads right.
+
+Not done: draft-board wiring (`annotateBoard` exists but no CLI, Phase 2),
+LLM digest (Phase 3), Vegas/weather (Phase 4). Couldn't exercise the full
+`roster`/`lineup` path end to end here — the ESPN league hadn't drafted and no
+Yahoo `.auth` session in this checkout; the pieces are unit-tested and the
+`collectIntel` path was probed directly.

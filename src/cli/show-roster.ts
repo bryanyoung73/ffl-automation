@@ -1,15 +1,26 @@
 import { loadConfig } from "../config.js";
 import { getProvider } from "../providers/index.js";
+import { hasFlag } from "./prompt.js";
+import { applyWeeklyIntel, formatAdjustments } from "../intel/weekly.js";
 
 /**
  * Read-only: print the current roster with projections and status.
  * Useful for sanity-checking a provider before trusting `npm run lineup`.
+ *
+ * Flags:
+ *   --no-intel   skip the chatter/news projection adjustment
+ *   --refresh    force-refresh the intel cache
  */
 async function main(): Promise<void> {
   const config = loadConfig();
   const provider = getProvider(config);
   try {
-    const { players, startingSlotCodes } = await provider.getRoster(config.week);
+    const { players: rawPlayers, startingSlotCodes } = await provider.getRoster(config.week);
+
+    const { players, adjustments, fetchedAt, skipped } = await applyWeeklyIntel(config, rawPlayers, {
+      skip: hasFlag("no-intel"),
+      force: hasFlag("refresh"),
+    });
 
     const rows = players
       .slice()
@@ -26,6 +37,12 @@ async function main(): Promise<void> {
     console.table(rows);
     console.log(`Starting slots detected: ${startingSlotCodes.join(", ") || "(none)"}`);
     if (config.week) console.log(`Week: ${config.week}`);
+
+    if (!skipped) {
+      console.log(`\nIntel as of ${fetchedAt || "(unknown)"}:`);
+      const lines = formatAdjustments(adjustments);
+      console.log(lines.length ? lines.join("\n") : "  (no notable chatter for this roster)");
+    }
   } finally {
     await provider.close();
   }

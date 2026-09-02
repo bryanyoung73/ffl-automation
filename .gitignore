@@ -2,6 +2,7 @@ node_modules/
 dist/
 .env
 .auth/
+.cache/
 output/
 artifacts/
 test-results/

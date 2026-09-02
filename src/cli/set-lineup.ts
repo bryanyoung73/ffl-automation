@@ -2,16 +2,18 @@ import { loadConfig } from "../config.js";
 import { getProvider, providerLabel } from "../providers/index.js";
 import { diffLineup, optimizeLineup, slotLabel } from "../lineup/optimizer.js";
 import { confirm, hasFlag } from "./prompt.js";
+import { applyWeeklyIntel, formatAdjustments } from "../intel/weekly.js";
 
 /**
- * Optimize this week's starting lineup from Yahoo projections, show the diff,
- * and (after confirmation) submit it.
+ * Optimize this week's starting lineup from projections (nudged by chatter/news
+ * intel), show the diff, and — after confirmation — submit it.
  *
  * Flags:
- *   --dry-run   compute and print, never submit
- *   --yes       skip the confirmation prompt
- *   --pin <id>  force a player (by Yahoo id) to keep their current start slot;
- *               repeatable
+ *   --dry-run    compute and print, never submit
+ *   --yes        skip the confirmation prompt
+ *   --pin <id>   force a player to keep their current start slot; repeatable
+ *   --no-intel   optimize on raw projections, no chatter adjustment
+ *   --refresh    force-refresh the intel cache
  */
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -22,9 +24,19 @@ async function main(): Promise<void> {
   const provider = getProvider(config);
   const label = providerLabel(config);
   try {
-    const { players, startingSlotCodes } = await provider.getRoster(config.week);
+    const { players: rawPlayers, startingSlotCodes } = await provider.getRoster(config.week);
     if (startingSlotCodes.length === 0) {
       throw new Error("No starting slots detected — cannot optimize. Check `npm run roster`.");
+    }
+
+    const { players, adjustments, fetchedAt, skipped } = await applyWeeklyIntel(config, rawPlayers, {
+      skip: hasFlag("no-intel"),
+      force: hasFlag("refresh"),
+    });
+    if (!skipped) {
+      const lines = formatAdjustments(adjustments);
+      console.log(`Intel as of ${fetchedAt || "(unknown)"}:`);
+      console.log(lines.length ? lines.join("\n") : "  (no notable chatter for this roster)");
     }
 
     const plan = optimizeLineup(players, startingSlotCodes, { pinnedPlayerIds });

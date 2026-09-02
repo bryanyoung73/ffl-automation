@@ -10,8 +10,9 @@
     "roster": "tsx src/cli/show-roster.ts",
     "lineup": "tsx src/cli/set-lineup.ts",
     "cheatsheet": "tsx src/cli/cheatsheet.ts",
+    "intel": "tsx src/cli/intel.ts",
     "test": "playwright test",
-    "test:unit": "playwright test tests/optimizer.spec.ts tests/vor.spec.ts tests/diff.spec.ts tests/report.spec.ts tests/board.spec.ts tests/espn-maps.spec.ts tests/espn-league.spec.ts",
+    "test:unit": "playwright test tests/optimizer.spec.ts tests/vor.spec.ts tests/diff.spec.ts tests/report.spec.ts tests/board.spec.ts tests/espn-maps.spec.ts tests/espn-league.spec.ts tests/intel-match.spec.ts tests/intel-apply.spec.ts tests/intel-espn-news.spec.ts",
     "codegen": "playwright codegen https://football.fantasysports.yahoo.com",
     "typecheck": "tsc --noEmit"
   },
