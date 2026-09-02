@@ -1,13 +1,16 @@
 import { cachedJson } from "./cache.js";
+import { normalizeName, teamCode } from "../nfl/names.js";
 import type { IntelPlayerRef, PlayerIdentity } from "./types.js";
+
+export { normalizeName, teamCode } from "../nfl/names.js";
 
 /**
  * Cross-provider player identity. Sleeper's `/players/nfl` dump carries both
  * `espn_id` and `yahoo_id`, so we match each roster/board player to a Sleeper
  * record (by normalized name + team/position) and read the other ids off it.
  *
- * `normalizeName`, `teamCode`, and `buildIdentityMap` are pure and unit-tested;
- * `loadSleeperPlayers` is the only impure part.
+ * `buildIdentityMap` is pure and unit-tested; `loadSleeperPlayers` is the only
+ * impure part. Name/team normalization lives in `src/nfl/names.ts`.
  */
 
 export interface SleeperPlayer {
@@ -31,40 +34,6 @@ export interface SleeperPlayer {
   depth_chart_position?: string | null;
   age?: number | null;
   years_exp?: number | null;
-}
-
-const SUFFIXES = new Set(["jr", "sr", "ii", "iii", "iv", "v"]);
-
-/** lowercase, drop punctuation and generational suffixes, collapse spaces. */
-export function normalizeName(raw: string): string {
-  const cleaned = raw
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "") // strip combining accents
-    .replace(/['’`.]/g, "")
-    .replace(/[^a-z\s-]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-  const parts = cleaned.split(" ").filter((p) => !SUFFIXES.has(p));
-  return parts.join(" ");
-}
-
-const TEAM_ALIASES: Record<string, string> = {
-  JAC: "JAX",
-  WAS: "WSH",
-  WFT: "WSH",
-  LA: "LAR",
-  OAK: "LV",
-  SD: "LAC",
-  STL: "LAR",
-  ARZ: "ARI",
-};
-
-/** Canonical NFL team code, mapping the known provider spellings together. */
-export function teamCode(raw: string | null | undefined): string {
-  if (!raw) return "";
-  const up = raw.toUpperCase().trim();
-  return TEAM_ALIASES[up] ?? up;
 }
 
 function idStr(v: number | string | null | undefined): string | undefined {

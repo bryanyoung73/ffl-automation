@@ -51,3 +51,31 @@ export async function cachedJson<T>(
     return readCache<T>(cacheDir, name, Number.POSITIVE_INFINITY);
   }
 }
+
+/**
+ * Like `cachedJson` but for an HTML/text page: `parse` runs on the fetched body
+ * and its result (must be JSON-serializable) is what gets cached and returned.
+ */
+export async function cachedParsed<T>(
+  cacheDir: string,
+  name: string,
+  url: string,
+  parse: (text: string) => T,
+  opts: { ttlMs: number; force?: boolean; headers?: Record<string, string> },
+): Promise<T | undefined> {
+  if (!opts.force) {
+    const hit = readCache<T>(cacheDir, name, opts.ttlMs);
+    if (hit !== undefined) return hit;
+  }
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Mozilla/5.0 (ffl-automation)", ...opts.headers },
+    });
+    if (!res.ok) return readCache<T>(cacheDir, name, Number.POSITIVE_INFINITY);
+    const data = parse(await res.text());
+    writeCache(cacheDir, name, data);
+    return data;
+  } catch {
+    return readCache<T>(cacheDir, name, Number.POSITIVE_INFINITY);
+  }
+}

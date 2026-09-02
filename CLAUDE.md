@@ -158,6 +158,15 @@ The draft board also carries `BoardEntry.adpChange` (ESPN
 `averageDraftPositionPercentChange`) → an `↑`/`↓` next to the ADP number for
 fast movers. Display-only; does not affect ordering or `--blend`.
 
+**Expert baseline = FantasyPros ECR** (`src/draft/ecr.ts`, `--no-ecr` to skip).
+`fetchEcr` scrapes `var ecrData` off the public cheat-sheet page (scoring-
+matched: ppr / half-point / standard), `attachEcr` joins to board entries by
+normalized name. When matched, `buildBoard` flags **ECR vs ADP** instead of the
+source's single rank — a real many-ranker consensus, so the divergence flags
+are trustworthy. Falls back to the source rank when the scrape fails.
+`parseEcrHtml` / `attachEcr` are pure + tested. Real strength-of-schedule was
+looked at and skipped — the positional-defense input isn't cleanly free.
+
 News scoring has two modes: `espnNews` (keyword, default — deliberately timid)
 and `newsDigest` (LLM, opt-in via `--llm` or `INTEL_LLM=1`, needs
 `ANTHROPIC_API_KEY`; `INTEL_LLM_MODEL` defaults to `claude-opus-5`). The digest

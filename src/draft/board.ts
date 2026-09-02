@@ -15,6 +15,13 @@ export interface BoardEntry {
    * drafts. Display-only — does not affect ordering.
    */
   adpChange?: number | null;
+  /** FantasyPros consensus rank (`attachEcr`). When present it is the expert
+   *  baseline the board flags against, in place of the source's own rank. */
+  ecrRank?: number | null;
+  /** ECR position rank, e.g. "WR4". */
+  ecrPosRank?: string | null;
+  /** ECR tier. */
+  ecrTier?: number | null;
 }
 
 export interface BoardRow {
@@ -25,14 +32,21 @@ export interface BoardRow {
   xRank: number | null;
   /** Position in Yahoo's pre-rank list. */
   listRank: number;
-  /** Dense rank by Yahoo's expert rank (XRank), over the same player pool. */
+  /**
+   * Dense rank by the expert baseline over the same player pool — ECR when
+   * `attachEcr` ran, otherwise the source's own rank (XRank).
+   */
   yahooExpertPos: number | null;
   /**
-   * yahooExpertPos - rank. Positive: Yahoo's experts rank him lower than the
-   * draft room (Yahoo cold / room high). Negative: Yahoo higher than the room.
-   * null when the player has no XRank or no ADP.
+   * yahooExpertPos - rank. Positive: the experts rank him lower than the draft
+   * room (analysts cold / room high). Negative: analysts higher than the room.
+   * null when the player has no expert rank or no ADP.
    */
   yahooGap: number | null;
+  /** FantasyPros ECR rank / position rank ("WR4") / tier, when matched. */
+  ecrRank: number | null;
+  ecrPosRank: string | null;
+  ecrTier: number | null;
   /** Snake round bucket: ceil(rank / teams). */
   tier: number;
   note: "" | "yahoo-hot" | "yahoo-cold";
@@ -59,6 +73,8 @@ export interface Board {
   positionFilter: Position | null;
   /** Data source name for rendered headers/labels, e.g. "Yahoo" or "ESPN". */
   sourceLabel: string;
+  /** Label for the expert-rank column: "ECR" when matched, else `sourceLabel`. */
+  expertLabel: string;
   rows: BoardRow[];
   /** Count of rows where abs(yahooVsAdp) >= threshold. */
   disagreements: number;
@@ -121,12 +137,17 @@ export function buildBoard(entries: readonly BoardEntry[], options: BuildBoardOp
     ? entries.filter((e) => e.player.position === positionFilter)
     : [...entries];
 
-  // Dense rank by Yahoo's expert rank, so it's on the same 1..n scale as the
-  // ADP-ordered board (raw XRank runs well past the player count).
+  // Expert baseline: FantasyPros ECR when it was matched, else the source's own
+  // rank. Dense-ranked so it's on the same 1..n scale as the ADP-ordered board.
+  const hasEcr = pool.some((e) => e.ecrRank != null);
+  const expertLabel = hasEcr ? "ECR" : sourceLabel;
+  const expertRank = (e: BoardEntry): number | null =>
+    hasEcr ? (e.ecrRank ?? null) : (e.xRank ?? null);
+
   const expertPosById = new Map<string, number>();
   pool
-    .filter((e) => e.xRank != null)
-    .sort((a, b) => a.xRank! - b.xRank!)
+    .filter((e) => expertRank(e) != null)
+    .sort((a, b) => expertRank(a)! - expertRank(b)!)
     .forEach((e, i) => expertPosById.set(e.player.id, i + 1));
 
   // Pure ADP order first — gives every player an adpRank to measure blend moves against.
@@ -167,6 +188,9 @@ export function buildBoard(entries: readonly BoardEntry[], options: BuildBoardOp
       listRank: e.listRank,
       yahooExpertPos,
       yahooGap,
+      ecrRank: e.ecrRank ?? null,
+      ecrPosRank: e.ecrPosRank ?? null,
+      ecrTier: e.ecrTier ?? null,
       tier: Math.ceil(rank / teams),
       note,
       adpRank,
@@ -187,9 +211,10 @@ export function buildBoard(entries: readonly BoardEntry[], options: BuildBoardOp
     threshold,
     positionFilter,
     sourceLabel,
+    expertLabel,
     rows,
     disagreements,
-    verdict: verdict(disagreements, rows.length, sourceLabel),
+    verdict: verdict(disagreements, rows.length, expertLabel),
     blended: blend,
     intelAsOf: options.intelAsOf ?? "",
   };

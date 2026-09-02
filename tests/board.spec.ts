@@ -124,7 +124,7 @@ test("renderBoard produces tiered markdown and a flat csv", () => {
   expect(markdown).toContain("## Tier 2  (picks 13–24)");
   const rows = csv.trim().split("\n");
   expect(rows[0]).toBe(
-    "rank,adp_rank,blend_shift,player,position,team,bye,adp,adp_change,yahoo_expert_pos,yahoo_list_rank,xrank,yahoo_gap,tier,flag,intel_season,intel_week,intel_note,intel_sources",
+    "rank,adp_rank,blend_shift,player,position,team,bye,adp,adp_change,expert_pos,ecr_rank,ecr_pos_rank,ecr_tier,yahoo_list_rank,xrank,expert_gap,tier,flag,intel_season,intel_week,intel_note,intel_sources",
   );
   expect(rows).toHaveLength(16);
 });

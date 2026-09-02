@@ -7,7 +7,8 @@ import { buildBoard } from "../draft/board.js";
 import { renderBoard } from "../draft/report.js";
 import { POSITIONS, type Position } from "../draft/types.js";
 import { hasFlag } from "./prompt.js";
-import { collectIntel } from "../intel/collect.js";
+import { collectIntel, intelCacheDir } from "../intel/collect.js";
+import { fetchEcr, attachEcr } from "../draft/ecr.js";
 import type { PlayerIntel } from "../intel/types.js";
 
 /**
@@ -19,6 +20,7 @@ import type { PlayerIntel } from "../intel/types.js";
  *   --threshold <n>    expert-vs-ADP-rank gap to flag a player (default: env)
  *   --pos <POS>        restrict to QB|RB|WR|TE|K|DEF
  *   --blend            reorder the board by ADP shifted by chatter impact
+ *   --no-ecr           don't fetch FantasyPros consensus (use the source's rank)
  *   --no-intel         skip the chatter/news pass
  *   --llm              use the LLM news digest (needs ANTHROPIC_API_KEY)
  *   --intel-depth <n>  players (by ADP) to gather intel for (default: teams * 8)
@@ -39,8 +41,19 @@ async function main(): Promise<void> {
     console.log(`  ${league.teams}-team ${league.scoring}`);
 
     console.log(`Reading ${sourceLabel} draft board...`);
-    const entries = await provider.getDraftBoard();
+    let entries = await provider.getDraftBoard();
     console.log(`  ${entries.length} players (${entries.filter((p) => p.adp != null).length} with ADP)`);
+
+    if (!hasFlag("no-ecr")) {
+      const ecr = await fetchEcr(intelCacheDir(config), league.scoring, { force: hasFlag("refresh") });
+      if (ecr.length) {
+        const res = attachEcr(entries, ecr);
+        entries = res.entries;
+        console.log(`  ${res.matched}/${entries.length} matched to FantasyPros ECR (${league.scoring})`);
+      } else {
+        console.log("  FantasyPros ECR unavailable — using the source's own rank");
+      }
+    }
 
     let intel: ReadonlyMap<string, PlayerIntel> | undefined;
     let intelAsOf = "";

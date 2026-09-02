@@ -7,18 +7,19 @@ export interface RenderedBoard {
   summary: string;
 }
 
-function noteLabels(src: string): Record<BoardRow["note"], string> {
+function noteLabels(exp: string): Record<BoardRow["note"], string> {
   return {
     "": "",
-    "yahoo-hot": `${src} ranks earlier than ADP`,
-    "yahoo-cold": `${src} ranks later than ADP`,
+    "yahoo-hot": `${exp} ranks earlier than ADP`,
+    "yahoo-cold": `${exp} ranks later than ADP`,
   };
 }
 
 /** Printable draft board: tiers as sections, plus a flat CSV. */
 export function renderBoard(board: Board): RenderedBoard {
   const src = board.sourceLabel || "Yahoo";
-  const NOTE_LABEL = noteLabels(src);
+  const exp = board.expertLabel || src;
+  const NOTE_LABEL = noteLabels(exp);
   const scope = board.positionFilter ? ` — ${board.positionFilter}` : "";
   const orderNote = board.blended
     ? `ordered by ADP blended with chatter (fallback ${src} rank)`
@@ -34,8 +35,8 @@ export function renderBoard(board: Board): RenderedBoard {
   ];
 
   const head = board.blended
-    ? `| # | Δ | Player | Pos | Team | Bye | ADP | ${src} | Flag | Chatter |`
-    : `| # | Player | Pos | Team | Bye | ADP | ${src} | Flag | Chatter |`;
+    ? `| # | Δ | Player | Pos | Team | Bye | ADP | ${exp} | Flag | Chatter |`
+    : `| # | Player | Pos | Team | Bye | ADP | ${exp} | Flag | Chatter |`;
   const sep = board.blended
     ? "| ---: | ---: | --- | --- | --- | ---: | ---: | ---: | --- | --- |"
     : "| ---: | --- | --- | --- | ---: | ---: | ---: | --- | --- |";
@@ -101,7 +102,7 @@ function truncate(s: string, n: number): string {
 
 function boardCsv(rows: BoardRow[]): string {
   const header =
-    "rank,adp_rank,blend_shift,player,position,team,bye,adp,adp_change,yahoo_expert_pos,yahoo_list_rank,xrank,yahoo_gap,tier,flag,intel_season,intel_week,intel_note,intel_sources";
+    "rank,adp_rank,blend_shift,player,position,team,bye,adp,adp_change,expert_pos,ecr_rank,ecr_pos_rank,ecr_tier,yahoo_list_rank,xrank,expert_gap,tier,flag,intel_season,intel_week,intel_note,intel_sources";
   const body = rows.map((r) =>
     [
       r.rank,
@@ -114,6 +115,9 @@ function boardCsv(rows: BoardRow[]): string {
       r.adp ?? "",
       r.adpChange ?? "",
       r.yahooExpertPos ?? "",
+      r.ecrRank ?? "",
+      r.ecrPosRank ?? "",
+      r.ecrTier ?? "",
       r.listRank,
       r.xRank ?? "",
       r.yahooGap ?? "",
@@ -129,7 +133,7 @@ function boardCsv(rows: BoardRow[]): string {
 }
 
 function boardSummary(board: Board): string {
-  const src = board.sourceLabel || "Yahoo";
+  const src = board.expertLabel || board.sourceLabel || "Yahoo";
   const flagged = board.rows
     .filter((r) => r.note !== "")
     .sort((a, b) => Math.abs(b.yahooGap ?? 0) - Math.abs(a.yahooGap ?? 0))

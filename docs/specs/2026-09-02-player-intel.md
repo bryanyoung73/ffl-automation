@@ -274,9 +274,44 @@ Three small, high-value signals for the draft board, added after Phase 4:
 87 unit tests. Verified live: Davante Adams flagged "(WR2)" −1.1, Kyren
 Williams / Judkins / Swift show `↑`.
 
+## Addendum — structured adds (2026-09-02)
+
+### FantasyPros ECR (shipped)
+
+`src/draft/ecr.ts`. `fetchEcr(cacheDir, scoring)` GETs the public
+`nfl/rankings/{ppr|half-point-ppr|standard}-cheatsheets.php` page and
+`parseEcrHtml` pulls the embedded `var ecrData = {...}` (fields `player_name`,
+`player_team_id`, `rank_ecr`, `pos_rank`, `tier`, `player_ecr_delta`).
+`attachEcr(entries, ecr)` joins by normalized name (+ team tiebreak) and reports
+the match count. Cached 8 h (`cachedParsed` in `cache.ts` — new HTML variant).
+
+`BoardEntry` gains `ecrRank` / `ecrPosRank` / `ecrTier`; `board.ts` — when any
+row has ECR — uses it as the dense-ranked **expert baseline** for the hot/cold
+flag in place of the source's single rank, and sets `Board.expertLabel = "ECR"`
+(threaded into the column header, `verdict`, and the summary). Falls back
+cleanly to the source rank when the scrape returns nothing. `cheatsheet.ts`:
+`--no-ecr` to disable; `--refresh` re-fetches. CSV gains `ecr_rank`,
+`ecr_pos_rank`, `ecr_tier`; `yahoo_*` CSV columns renamed to `expert_*`.
+
+Name normalization moved to `src/nfl/names.ts` (shared by `intel/match.ts` and
+`ecr.ts`; re-exported from `match.ts` for back-compat).
+
+Verified live: 226/300 matched (top ~150 near-total); the flags are now
+consensus-grade — e.g. Josh Jacobs ADP 66 / ECR ~146 ("ECR lower by 86"),
+where ESPN's single rank had it at ~20.
+
+### Playoff strength-of-schedule (not built)
+
+Investigated and skipped. The NFL schedule is free (ESPN), but a per-position
+defense-strength input is not cleanly available without a paid FantasyPros API
+key or a committed points-allowed data file each season. A rough version
+(opponent win totals as a defense proxy) adds noise more than signal. Revisit
+if a key or data source appears.
+
 ## Status
 
-All four phases plus the cheap wins shipped. The full weekly stack: Sleeper (injury/practice) +
+Phases 1–4 + cheap wins + FantasyPros ECR shipped. `intel-sleeper-role`,
+`intel-vegas`, `ecr` specs added — 91 unit tests. The full weekly stack: Sleeper (injury/practice) +
 news (keyword or `--llm` digest) + Vegas → adjusted projections into the
 optimizer. Draft: Sleeper + news → Chatter column / `--blend`. Live-verified
 except the exact model output quality of the LLM digest, which depends on the
