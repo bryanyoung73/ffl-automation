@@ -6,11 +6,17 @@ import { mergeIntel } from "./apply.js";
 import { sleeperProvider } from "./providers/sleeper.js";
 import { espnNewsProvider } from "./providers/espnNews.js";
 import { newsDigestProvider } from "./providers/newsDigest.js";
+import { vegasProvider } from "./providers/vegas.js";
 import type { IntelContext, IntelPlayerRef, IntelProvider, PlayerIntel } from "./types.js";
 
-/** `--llm` swaps the keyword news provider for the LLM digest. */
-function providersFor(llm: boolean): IntelProvider[] {
-  return [sleeperProvider, llm ? newsDigestProvider : espnNewsProvider];
+/**
+ * `--llm` swaps the keyword news provider for the LLM digest. Vegas is a
+ * week-only signal, so it's left out of the draft board pass.
+ */
+function providersFor(llm: boolean, weekly: boolean): IntelProvider[] {
+  const providers: IntelProvider[] = [sleeperProvider, llm ? newsDigestProvider : espnNewsProvider];
+  if (weekly) providers.push(vegasProvider);
+  return providers;
 }
 
 /** Merged intel keyed by input player id, plus when it was gathered. */
@@ -72,8 +78,9 @@ export async function collectIntel(
     llmModel: config.intelLlmModel,
   };
 
+  const weekly = opts.scope !== "draft";
   const results = await Promise.all(
-    providersFor(llm).map((p) =>
+    providersFor(llm, weekly).map((p) =>
       p.collect(ctx).catch((err: unknown) => {
         console.warn(`intel: ${p.name} failed — ${(err as Error).message}`);
         return new Map();

@@ -1,7 +1,7 @@
 # Player intel: a shared chatter/news signal for draft + weekly
 
 Date: 2026-09-02
-Status: Phases 1–3 shipped; Phase 4 not started
+Status: shipped (Phases 1–4)
 
 ## Problem
 
@@ -230,6 +230,34 @@ degradation are all unit-tested / smoke-tested; the actual model call and its
 output quality are the user's to confirm (`--llm` on a real key). Expect prompt
 tuning after the first real batch.
 
-## Open item for Phase 4
+## Addendum — Phase 4 shipped (2026-09-02)
 
-Vegas lines + weather as weekly projection inputs — unchanged from the plan.
+Vegas game context as a weekly signal.
+
+- `providers/vegas.ts` — pulls the ESPN public NFL scoreboard for the target
+  week (free, no key). `impliedTotals(ou, homeSpread)` splits the O/U by the
+  spread; `parseScoreboard` yields a `GameContext` per team (both sides of each
+  game — favorite spread negated for the road team). `vegasImpact({position,
+  impliedTotal, opponentImpliedTotal, spread, weatherBadness})`:
+  - base: `(impliedTotal - 22) * 0.13`, clamped ±2
+  - game script: fav by 7+ → RB +0.3 / pass-catchers −0.15; dog by 7+ →
+    WR/TE +0.3, QB +0.15, RB −0.3
+  - weather (`weatherBadness` 0/1/2 from `event.weather.displayValue` + temp):
+    K −0.4/−0.8, QB/WR/TE −0.25/−0.5, RB +0.1
+  - DEF inverts — it wants a LOW opponent total; bad weather helps
+  - notes: `"Implied total 28.3 (DET -7 vs NO, O/U 49.5)"` + a weather note
+- Week-only: `collectIntel` runs it whenever `scope !== "draft"`; the draft
+  board (which only reads `seasonImpact`) skips the fetch.
+- All three pure fns unit-tested (`intel-vegas.spec.ts`). 81 unit tests total.
+
+Verified live against the ESPN scoreboard: implied totals compute correctly
+(KC -3 vs DEN → 22.8; DET -7 → 28.3), game-script and position nuance apply,
+neutral matchups land near zero.
+
+## Status
+
+All four phases shipped. The full weekly stack: Sleeper (injury/practice) +
+news (keyword or `--llm` digest) + Vegas → adjusted projections into the
+optimizer. Draft: Sleeper + news → Chatter column / `--blend`. Live-verified
+except the exact model output quality of the LLM digest, which depends on the
+user's key and prompt tuning.

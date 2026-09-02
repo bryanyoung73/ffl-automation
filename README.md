@@ -12,7 +12,8 @@ Commands:
 - **`npm run cheatsheet`** — printable draft board ordered by ADP with tiers,
   flagging where the source's expert rank disagrees with the draft room, with a
   Chatter column from news/injury intel (`--blend` to reorder by it).
-- **`npm run roster`** — current roster with projections and injury status.
+- **`npm run roster`** — current roster with projections and injury status
+  (nudged weekly by injury/news chatter and Vegas implied totals).
 - **`npm run lineup`** — optimize the weekly starting lineup from projections,
   show a diff, confirm, submit (`--dry-run` to just print).
 

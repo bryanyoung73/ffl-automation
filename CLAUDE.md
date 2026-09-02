@@ -117,7 +117,7 @@ src/
     types.ts  cache.ts  match.ts (Sleeper identity)  apply.ts (PURE merge +
     adjust)  collect.ts (orchestrator + disk cache)  weekly.ts (roster/lineup
     entry)  providers/{sleeper, espnNewsFeed (shared fetch), espnNews (keyword),
-    newsDigest (LLM, --llm)}.ts
+    newsDigest (LLM, --llm), vegas (implied totals + weather, week-only)}.ts
   cli/                 provider-agnostic: loadConfig() -> getProvider(config)
     launch-chrome.ts   `npm run login:chrome` (Yahoo)
     login.ts           `npm run login` (Yahoo; CDP attach or fallback)
@@ -130,7 +130,7 @@ tests/
   optimizer.spec.ts  vor.spec.ts  diff.spec.ts  report.spec.ts  board.spec.ts
   espn-maps.spec.ts  espn-league.spec.ts  board-intel.spec.ts
   intel-match.spec.ts  intel-apply.spec.ts  intel-espn-news.spec.ts
-  intel-news-digest.spec.ts
+  intel-news-digest.spec.ts  intel-vegas.spec.ts
                        pure logic, no browser
   fixtures/espn-league.sample.json          hand-built; swap for a real dump
   lineup-page.spec.ts  draft-rankings-page.spec.ts
@@ -145,10 +145,13 @@ tests/
 - **draft** (`cheatsheet`): `buildBoard({ intel, blend })` — annotates a Chatter
   column by default; `--blend` reorders by ADP shifted by `seasonImpact`.
 
-Sources: Sleeper (`injury_status` / practice / trending — the workhorse) and
-ESPN player news (name-led actionable blurbs only; roundup/opinion articles are
-dropped). Bundles cache to `.cache/` (gitignored). `match.ts` joins players
-across providers via the Sleeper dump (`espn_id` + `yahoo_id`).
+Sources: Sleeper (`injury_status` / practice / trending — the workhorse), ESPN
+player news (name-led actionable blurbs only; roundup/opinion articles are
+dropped), and — weekly only — Vegas via the ESPN scoreboard (implied team total
+from the O/U + spread, plus light game-script and weather nuance by position;
+`vegas.ts` is pure + unit-tested, not run for the draft board). Bundles cache to
+`.cache/` (gitignored). `match.ts` joins players across providers via the
+Sleeper dump (`espn_id` + `yahoo_id`).
 
 News scoring has two modes: `espnNews` (keyword, default — deliberately timid)
 and `newsDigest` (LLM, opt-in via `--llm` or `INTEL_LLM=1`, needs
