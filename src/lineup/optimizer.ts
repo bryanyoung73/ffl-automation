@@ -177,6 +177,12 @@ export function diffLineup(players: readonly Player[], plan: LineupPlan): Lineup
 
   const startingIds = new Set(targetSlotById.keys());
   const currentStarters = players.filter((p) => isStartingSlot(p.currentSlot));
+  // A submission is only worthwhile when the *set* of starters changes. Pure
+  // slot-label reshuffles among the same starters (WR <-> W/R/T) score the same.
+  const currentStartingIds = new Set(currentStarters.map((p) => p.id));
+  const needsSubmit =
+    currentStartingIds.size !== startingIds.size ||
+    [...startingIds].some((id) => !currentStartingIds.has(id));
   const currentProjected = round1(
     currentStarters.reduce((s, p) => s + p.projectedPoints, 0),
   );
@@ -188,6 +194,7 @@ export function diffLineup(players: readonly Player[], plan: LineupPlan): Lineup
 
   return {
     changes,
+    needsSubmit,
     currentProjected,
     proposedProjected,
     delta: round1(proposedProjected - currentProjected),

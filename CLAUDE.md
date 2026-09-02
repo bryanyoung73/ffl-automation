@@ -4,10 +4,13 @@ Context for AI assistants working in this repo.
 
 ## What this is
 
-TypeScript automation for a fantasy football team. Two features:
-1. **Draft cheat sheet** (`npm run cheatsheet`) — shipped, verified live (Yahoo).
-2. **Weekly lineup optimizer** (`npm run lineup`) — built; Yahoo selectors
-   unverified.
+TypeScript automation for a fantasy football team, against Yahoo or ESPN
+(see Providers). Two features:
+1. **Draft cheat sheet** (`npm run cheatsheet`) — shipped, verified live on
+   both providers (pre-draft only).
+2. **Weekly lineup optimizer** (`npm run roster` / `npm run lineup`) — verified
+   live read-side on Yahoo; the real submit and the ESPN roster path are not
+   yet exercised (see Current status).
 
 Stack: `@playwright/test`, `tsx` for CLIs, ESM, strict TS. No framework.
 
@@ -26,24 +29,37 @@ the same provider-agnostic shapes, so `draft/` and `lineup/` never branch on it.
   write path (`applyLineup` → `POST transactions/`) is unofficial, so
   `--dry-run` first. See `docs/specs/2026-08-31-espn-api-provider.md`.
 
-## Current status (2026-08-29)
+## Current status (2026-09-02)
 
-- **League is an Offline Draft.** Drafted off Yahoo, results keyed in after.
-  Nothing consumes `editprerank`, so there's no "push my rankings to Yahoo" —
-  the cheat sheet is a printable/CSV reference.
+### Yahoo (league 891808)
+
+- **Draft is complete.** League is an Offline Draft (was drafted off Yahoo).
+- **Lineup optimizer — WORKING, verified live.** `npm run roster` and
+  `npm run lineup --dry-run` run clean against the real roster.
+  `src/pages/LineupPage.ts` rewritten for Yahoo's classic team editor: anchors on
+  `select[name="<playerId>"]` (option values = eligible slots + BN; selected =
+  current slot). `config.lineupUrl` pins `?stat1=P&stat2=PW` for weekly
+  projections. `applyPlan()` (real submit) is written but **not yet run against
+  live Yahoo** — needs a real lineup change to verify the Save step.
+- **Draft cheat sheet — spent.** `editprerank` returns "There was a problem"
+  post-draft; `DraftRankingsPage.readPreRank()` throws `PRERANK_UNAVAILABLE` with
+  a friendly message and the live test skips. The `board.ts` / `renderBoard`
+  code stays for next season's draft.
 - **A valid login session exists** at `.auth/storageState.json` (Google via the
-  CDP-Chrome flow). `npm run cheatsheet` works end to end against live Yahoo.
-- **Draft cheat sheet — DONE.** `LeagueSettingsPage` + `DraftRankingsPage`
-  verified against league 891808. `src/draft/board.ts` (pure) + `renderBoard()`
-  in `report.ts`. 36 unit tests pass.
-- **Lineup optimizer — selectors still unverified.** `src/pages/LineupPage.ts`
-  `SELECTORS` are best guesses; tune against the real roster DOM after the draft.
-  `applyPlan()` assumes the classic per-row `<select>` UI.
-- **Deferred (v2 building blocks, tested but NOT wired):** `src/draft/vor.ts`,
-  `src/draft/diff.ts`, the `buildCheatSheet`/`renderReport` override path in
-  `report.ts`, `src/draft/signals/`. These need Yahoo projected points, which
-  only load on per-row expand on `editprerank` (300 clicks) — a separate
-  projections scrape is the v2 task.
+  CDP-Chrome flow).
+
+### ESPN (league 1144783883, IDP)
+
+- **Cheat sheet — verified live.** `PROVIDER=espn npm run cheatsheet` pulls 300
+  ADP-ranked players and writes `output/cheatsheet-<date>.{md,csv}`.
+- **Roster / lineup — wired, not yet verified.** League had not drafted as of
+  2026-09-01, so rosters came back empty. Re-check `npm run roster` /
+  `npm run lineup -- --dry-run` now that it may have drafted; IDP slots
+  (LB/DL/DB) are recognised but IDP optimizer behaviour is untested.
+- `byeWeek` is absent from ESPN pre-season → cheat-sheet Bye column shows "—".
+
+- **Deferred (v2, tested, NOT wired):** `src/draft/vor.ts`, `src/draft/diff.ts`,
+  the override renderers in `report.ts`, `src/draft/signals/`.
 
 ## Auth model
 
@@ -84,9 +100,9 @@ src/
   browser.ts           browser context from saved storageState (Yahoo only)
   pages/
     TeamPage.ts             login-state checks, output/ debug dumps
-    LineupPage.ts           lineup selectors; roster scrape + submit (UNVERIFIED)
+    LineupPage.ts           classic team editor: roster scrape (verified) + submit
     LeagueSettingsPage.ts   settings + team count (verified)
-    DraftRankingsPage.ts    editprerank scrape: rank/adp/xrank/bye/pos (verified)
+    DraftRankingsPage.ts    editprerank scrape (verified pre-draft; 404s post-draft)
   lineup/
     optimizer.ts       PURE branch-and-bound lineup optimizer, unit-tested
     types.ts
@@ -130,9 +146,12 @@ tests/
   sheets land in `output/`.
 - Commit only when the user asks.
 
-## Next task (post-draft, lineup optimizer)
+## Next task
 
-User runs `npm run roster` and shares the output / an `output/` dump. Then:
-verify/fix `LineupPage` `SELECTORS`, confirm
-`readRoster()` returns real players with projections and correct slot codes, then
-validate `set-lineup --dry-run` before a live submit.
+`applyPlan()` — the real lineup submit — has not run against live Yahoo yet.
+Next time the optimizer actually wants a change (start-set differs, not just a
+cosmetic slot swap), run `npm run lineup` for real and confirm the Save step
+works: `SELECTORS.saveButton` tries `button.roster-save-btn` /
+`button:has-text("Save Changes")` / `input[name="jsubmit"]`. The classic page's
+save control was only seen as `<input type="hidden" name="jsubmit">` in the dump,
+so the visible button selector may need adjusting.

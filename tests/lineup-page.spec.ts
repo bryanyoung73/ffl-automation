@@ -40,6 +40,6 @@ test("reads a non-empty roster with projections", async ({ browser }) => {
       expect(p.currentSlot).toMatch(/^[A-Z/]+$/);
     }
   } finally {
-    await context.close();
+    await context.close().catch(() => undefined);
   }
 });

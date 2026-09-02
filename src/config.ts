@@ -128,9 +128,10 @@ export function loadConfig(): Config {
   const week = optionalInt("YAHOO_WEEK") ?? optionalInt("ESPN_WEEK");
 
   const teamUrl = `${baseUrl}/f1/${leagueId}/${teamId}`;
-  const lineupUrl = week
-    ? `${baseUrl}/f1/${leagueId}/${teamId}/team?week=${week}`
-    : `${baseUrl}/f1/${leagueId}/${teamId}/team`;
+  // Team page in the projected-points stat view (stat1=P projections, stat2=PW
+  // "projected week"); the per-player slot <select>s are on this same page.
+  const lineupBase = `${baseUrl}/f1/${leagueId}/${teamId}?stat1=P&stat2=PW`;
+  const lineupUrl = week ? `${lineupBase}&week=${week}` : lineupBase;
 
   const overrideThreshold = optionalInt("DRAFT_OVERRIDE_THRESHOLD") ?? 18;
 

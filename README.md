@@ -120,36 +120,33 @@ Chrome dance.
 src/
   config.ts            .env loading; PROVIDER switch + per-provider vars
   providers/
-    types.ts           LeagueProvider interface
-    index.ts           getProvider(config)
-    yahoo/             wraps the Playwright page objects
-    espn/              client.ts + maps.ts (pure) + EspnLeague.ts
+    types.ts               LeagueProvider interface
+    index.ts               getProvider(config)
+    yahoo/YahooLeague.ts    wraps the Playwright page objects
+    espn/                   client.ts + maps.ts (pure) + EspnLeague.ts
   browser.ts           browser context from the saved session (Yahoo)
-  pages/               ALL Yahoo selectors (TeamPage, LineupPage, ...)
-  lineup/
-    optimizer.ts       pure: roster + projections -> optimal legal lineup
-  draft/
-    board.ts  report.ts   pure: cheat-sheet builder + renderers
-  cli/                 provider-agnostic entry points
-tests/
-  *.spec.ts            pure logic, no browser
-  espn-*.spec.ts       ESPN maps + fixture mapping
+  pages/
+    TeamPage.ts             login checks, output/ debug dumps
+    LineupPage.ts           classic team editor: roster scrape + lineup submit
+    LeagueSettingsPage.ts   league settings + team count
+    DraftRankingsPage.ts    editprerank scrape (pre-draft only)
+  lineup/optimizer.ts  pure: roster + projections -> optimal legal lineup
+  draft/board.ts       pure: pre-rank data -> ADP-ordered tiered cheat sheet
+  draft/report.ts      pure: renderBoard() markdown + csv
+  cli/                 provider-agnostic entry points (loadConfig -> getProvider)
+tests/                 *.spec.ts — pure logic (no browser, incl. espn-*) + live
+                       Yahoo checks that auto-skip without a session
   fixtures/            sample ESPN payload
 ```
 
 ## Adjusting selectors
 
-Yahoo ships no stable test IDs, so `src/pages/LineupPage.ts` starts with
-**best-guess selectors**. After your first `npm run login`:
+Yahoo ships no stable test IDs and its class names rotate, so the page objects
+anchor on structural hooks (`select[name]`, `data-pos`, ARIA attributes, column
+order). If a scrape breaks after a Yahoo redesign, `readRoster()` /
+`readPreRank()` dump the page HTML + a screenshot to `output/`; `npm run codegen`
+opens Playwright's inspector against Yahoo to find new anchors.
 
-```bash
-npm run roster     # see what the current selectors scrape
-npm run codegen    # click your real lineup page, copy better selectors
-```
-
-Every selector is in the `SELECTORS` object at the top of `LineupPage.ts` with
-primary + fallback guesses. `readRoster()` and `applyPlan()` save page HTML and a
-screenshot to `output/` when they can't find what they expect.
-
-The flex rule is assumed to be `W/R/T` (RB/WR/TE eligible). If your league differs,
-edit `deriveEligibleSlots()` in `LineupPage.ts`.
+Eligible slots and the current slot come straight from each player's
+`<select>` options, so flex rules (`W/R/T`, `W/R`, `Q/W/R/T`, …) are picked up
+automatically — no config needed.

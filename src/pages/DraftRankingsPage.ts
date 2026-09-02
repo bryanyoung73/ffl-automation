@@ -30,11 +30,23 @@ export class DraftRankingsPage extends TeamPage {
     super(page, config);
   }
 
+  /** Thrown when Yahoo's Edit Pre-Draft Ranks page is unavailable (usually: draft complete). */
+  static readonly UNAVAILABLE = "PRERANK_UNAVAILABLE";
+
   async readPreRank(): Promise<PreRankEntry[]> {
     await this.page.goto(this.config.preRankUrl, { waitUntil: "domcontentloaded" });
     await this.assertLoggedIn();
-    await this.page.waitForSelector(ROW_ANCHOR, { timeout: 30_000 }).catch(() => undefined);
 
+    const title = await this.page.title().catch(() => "");
+    if (/problem|not found|error/i.test(title)) {
+      throw new Error(
+        `${DraftRankingsPage.UNAVAILABLE}: Yahoo's Edit Pre-Draft Ranks page ` +
+          `returned "${title}". This normally means your draft is complete — ` +
+          `the cheat sheet is a pre-draft tool. Use \`npm run lineup\` for the season.`,
+      );
+    }
+
+    await this.page.waitForSelector(ROW_ANCHOR, { timeout: 15_000 }).catch(() => undefined);
     const rows = await this.page.evaluate(scrapePreRankRows, ROW_ANCHOR);
 
     if (rows.length === 0) {
