@@ -308,10 +308,29 @@ key or a committed points-allowed data file each season. A rough version
 (opponent win totals as a defense proxy) adds noise more than signal. Revisit
 if a key or data source appears.
 
+### VOR column (shipped)
+
+`src/draft/vor.ts` (pure, unit-tested, long unwired) is now connected. ESPN's
+`kona_player_info` returns season projections — `seasonProjectedPoints(stats,
+season)` (with a `seasonId` guard, since prior + current projections both come
+back) fills `BoardEntry.projectedPoints`. `buildBoard`, given
+`options.leagueSettings`, runs `computeVor` over the **offense** entries
+(`computeVor` has no IDP replacement model — LB/DL/DB get no VOR) and sets
+`vor` / `vorRank` / `vorGap` per row. `vorGap = vorRank − rank-among-offense`
+(not raw board rank — the IDP-heavy board would skew it). Rendered as a `VOR`
+column: the value, plus a `↑N`/`↓N` when the gap ≥ a round and the pick is
+inside `teams * 10`; K/DEF show a value but no arrow (flat curves, always-late
+ADP). Summary lists the biggest early-round gaps. `cheatsheet.ts` passes
+`leagueSettings`; auto-on when projections are present.
+
+`tests/board-vor.spec.ts`. Verified live: VOR flags Josh Jacobs (−101 vs the
+pick — matches the ECR flag), plus a cluster of mid-round WRs going ahead of
+their projection.
+
 ## Status
 
-Phases 1–4 + cheap wins + FantasyPros ECR shipped. `intel-sleeper-role`,
-`intel-vegas`, `ecr` specs added — 91 unit tests. The full weekly stack: Sleeper (injury/practice) +
+Phases 1–4 + cheap wins + FantasyPros ECR + VOR shipped. `intel-sleeper-role`,
+`intel-vegas`, `ecr`, `board-vor` specs added — 94 unit tests. The full weekly stack: Sleeper (injury/practice) +
 news (keyword or `--llm` digest) + Vegas → adjusted projections into the
 optimizer. Draft: Sleeper + news → Chatter column / `--blend`. Live-verified
 except the exact model output quality of the LLM digest, which depends on the

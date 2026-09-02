@@ -34,12 +34,15 @@ export function renderBoard(board: Board): RenderedBoard {
     "",
   ];
 
+  const hasVor = board.rows.some((r) => r.vor != null);
+  const vorCol = hasVor ? " VOR |" : "";
+  const vorSep = hasVor ? " ---: |" : "";
   const head = board.blended
-    ? `| # | Δ | Player | Pos | Team | Bye | ADP | ${exp} | Flag | Chatter |`
-    : `| # | Player | Pos | Team | Bye | ADP | ${exp} | Flag | Chatter |`;
+    ? `| # | Δ | Player | Pos | Team | Bye | ADP | ${exp} |${vorCol} Flag | Chatter |`
+    : `| # | Player | Pos | Team | Bye | ADP | ${exp} |${vorCol} Flag | Chatter |`;
   const sep = board.blended
-    ? "| ---: | ---: | --- | --- | --- | ---: | ---: | ---: | --- | --- |"
-    : "| ---: | --- | --- | --- | ---: | ---: | ---: | --- | --- |";
+    ? `| ---: | ---: | --- | --- | --- | ---: | ---: | ---: |${vorSep} --- | --- |`
+    : `| ---: | --- | --- | --- | ---: | ---: | ---: |${vorSep} --- | --- |`;
 
   let currentTier = 0;
   for (const row of board.rows) {
@@ -63,6 +66,7 @@ export function renderBoard(board: Board): RenderedBoard {
       `${row.player.bye ?? "—"}`,
       `${fmt(row.adp)}${adpArrow(row.adpTrend)}`,
       fmt(row.yahooExpertPos),
+      ...(hasVor ? [vorCell(row, board.teams)] : []),
       NOTE_LABEL[row.note],
       chatter,
     ];
@@ -95,6 +99,27 @@ function adpArrow(trend: BoardRow["adpTrend"]): string {
   return trend === "up" ? " ↑" : trend === "down" ? " ↓" : "";
 }
 
+/** K/DEF value curves are flat and their ADP is always late — VOR-vs-ADP gaps
+ *  there are structural noise, same as the hot/cold flag. */
+const VOR_QUIET = new Set(["K", "DEF"]);
+
+/** VOR value, plus an arrow when VOR rank disagrees with the board by a round+
+ *  (within the draftable range only — deeper than that it's structural). */
+function vorCell(row: BoardRow, teams: number): string {
+  if (row.vor == null) return "";
+  const v = `${Math.round(row.vor)}`;
+  const g = row.vorGap;
+  if (
+    g != null &&
+    Math.abs(g) >= teams &&
+    row.rank <= teams * 10 &&
+    !VOR_QUIET.has(row.player.position)
+  ) {
+    return `${v} ${g < 0 ? `↑${-g}` : `↓${g}`}`;
+  }
+  return v;
+}
+
 function truncate(s: string, n: number): string {
   const clean = s.replace(/\s+/g, " ").trim();
   return clean.length <= n ? clean : `${clean.slice(0, n - 1)}…`;
@@ -102,7 +127,7 @@ function truncate(s: string, n: number): string {
 
 function boardCsv(rows: BoardRow[]): string {
   const header =
-    "rank,adp_rank,blend_shift,player,position,team,bye,adp,adp_change,expert_pos,ecr_rank,ecr_pos_rank,ecr_tier,yahoo_list_rank,xrank,expert_gap,tier,flag,intel_season,intel_week,intel_note,intel_sources";
+    "rank,adp_rank,blend_shift,player,position,team,bye,adp,adp_change,expert_pos,ecr_rank,ecr_pos_rank,ecr_tier,vor,vor_rank,vor_gap,yahoo_list_rank,xrank,expert_gap,tier,flag,intel_season,intel_week,intel_note,intel_sources";
   const body = rows.map((r) =>
     [
       r.rank,
@@ -118,6 +143,9 @@ function boardCsv(rows: BoardRow[]): string {
       r.ecrRank ?? "",
       r.ecrPosRank ?? "",
       r.ecrTier ?? "",
+      r.vor ?? "",
+      r.vorRank ?? "",
+      r.vorGap ?? "",
       r.listRank,
       r.xRank ?? "",
       r.yahooGap ?? "",
@@ -145,6 +173,28 @@ function boardSummary(board: Board): string {
       const dir = r.note === "yahoo-hot" ? `${src} higher` : `${src} lower`;
       lines.push(
         `  board #${r.rank} ${r.player.name} (${r.player.position}) — ADP ${fmt(r.adp)}, ${src} expert ~#${r.yahooExpertPos}  [${dir} by ${Math.abs(r.yahooGap ?? 0)}]`,
+      );
+    }
+  }
+
+  // Only within the draftable range — a big VOR gap at pick 260 isn't news.
+  const vorWithin = board.teams * 10;
+  const vorGaps = board.rows
+    .filter(
+      (r) =>
+        r.vorGap != null &&
+        Math.abs(r.vorGap) >= board.teams &&
+        r.rank <= vorWithin &&
+        !VOR_QUIET.has(r.player.position),
+    )
+    .sort((a, b) => Math.abs(b.vorGap!) - Math.abs(a.vorGap!))
+    .slice(0, 12);
+  if (vorGaps.length) {
+    lines.push("", "Positional value (VOR) vs the board:");
+    for (const r of vorGaps) {
+      const dir = r.vorGap! < 0 ? "worth more" : "worth less";
+      lines.push(
+        `  board #${r.rank} ${r.player.name} (${r.player.position}) — VOR ${Math.round(r.vor!)}, VOR rank #${r.vorRank}  [${dir} than the pick — by ${Math.abs(r.vorGap!)}]`,
       );
     }
   }

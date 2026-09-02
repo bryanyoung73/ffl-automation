@@ -14,6 +14,7 @@ import {
   slotCode,
   draftBoardFilter,
   weeklyProjectedPoints,
+  seasonProjectedPoints,
   type ScoringKind,
 } from "./maps.js";
 
@@ -134,9 +135,11 @@ export function mapPlayerPoolEntry(
   entry: PlayerPoolEntry,
   index: number,
   scoring: ScoringKind,
+  season?: number,
 ): BoardEntry {
   const p = entry.player ?? {};
   const rankType = rankTypeForScoring(scoring);
+  const seasonProj = seasonProjectedPoints(p.stats, season);
   const adpRaw = p.ownership?.averageDraftPosition ?? 0;
   const xRank = p.draftRanksByRankType?.[rankType]?.rank ?? null;
   return {
@@ -151,6 +154,7 @@ export function mapPlayerPoolEntry(
     adp: adpRaw > 0 ? adpRaw : null,
     listRank: index + 1,
     adpChange: p.ownership?.averageDraftPositionPercentChange ?? null,
+    projectedPoints: seasonProj > 0 ? seasonProj : null,
   };
 }
 
@@ -240,7 +244,7 @@ export class EspnLeague implements LeagueProvider {
       filter: draftBoardFilter(rankTypeForScoring(scoring)),
     });
     const players = raw.players ?? [];
-    return players.map((e, i) => mapPlayerPoolEntry(e, i, scoring));
+    return players.map((e, i) => mapPlayerPoolEntry(e, i, scoring, this.espn.season));
   }
 
   async getRoster(week?: number): Promise<RosterReadResult> {

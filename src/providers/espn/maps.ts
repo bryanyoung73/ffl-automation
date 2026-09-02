@@ -151,6 +151,7 @@ interface StatEntry {
   statSourceId?: number;
   statSplitTypeId?: number;
   scoringPeriodId?: number;
+  seasonId?: number;
   appliedTotal?: number;
 }
 
@@ -171,10 +172,16 @@ export function weeklyProjectedPoints(
 /** Projected fantasy points for the full season (statSplitTypeId 0). */
 export function seasonProjectedPoints(
   stats: readonly StatEntry[] | null | undefined,
+  season?: number,
 ): number {
-  const hit = stats?.find(
+  const projected = (stats ?? []).filter(
     (s) => s.statSourceId === 1 && s.statSplitTypeId === 0,
   );
+  // Multiple projected-season rows can come back (prior season + current);
+  // prefer the one for `season`.
+  const hit =
+    (season != null && projected.find((s) => s.seasonId === season)) ||
+    projected[0];
   return hit?.appliedTotal ?? 0;
 }
 

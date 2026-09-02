@@ -167,6 +167,16 @@ are trustworthy. Falls back to the source rank when the scrape fails.
 `parseEcrHtml` / `attachEcr` are pure + tested. Real strength-of-schedule was
 looked at and skipped — the positional-defense input isn't cleanly free.
 
+**VOR column** — `src/draft/vor.ts` (pure, long-standing) is now wired. ESPN's
+`kona_player_info` returns season projections (`seasonProjectedPoints` with a
+`seasonId` guard), so `BoardEntry.projectedPoints` populates and `buildBoard`
+(given `leagueSettings`) computes value-over-replacement per player. The `VOR`
+column shows the value; a `↑N`/`↓N` when VOR rank disagrees with the player's
+rank *among offense* by a round+, within the draftable range only. Offense
+only — `computeVor` has no IDP model, so LB/DL/DB get no VOR. K/DEF get a value
+but no gap arrow (flat curves + always-late ADP = structural noise). Summary
+lists the biggest early-round VOR-vs-board gaps.
+
 News scoring has two modes: `espnNews` (keyword, default — deliberately timid)
 and `newsDigest` (LLM, opt-in via `--llm` or `INTEL_LLM=1`, needs
 `ANTHROPIC_API_KEY`; `INTEL_LLM_MODEL` defaults to `claude-opus-5`). The digest

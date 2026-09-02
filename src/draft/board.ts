@@ -1,5 +1,8 @@
-import type { PlayerRef, Position } from "./types.js";
+import { POSITIONS, type LeagueSettings, type PlayerRef, type Position } from "./types.js";
 import type { PlayerIntel } from "../intel/types.js";
+import { computeVor } from "./vor.js";
+
+const OFFENSE: ReadonlySet<string> = new Set(POSITIONS);
 
 export interface BoardEntry {
   player: PlayerRef;
@@ -22,6 +25,8 @@ export interface BoardEntry {
   ecrPosRank?: string | null;
   /** ECR tier. */
   ecrTier?: number | null;
+  /** Season projected fantasy points — feeds VOR when `leagueSettings` is passed. */
+  projectedPoints?: number | null;
 }
 
 export interface BoardRow {
@@ -64,6 +69,12 @@ export interface BoardRow {
   adpChange: number | null;
   /** "up" / "down" when ADP is moving fast, else "". Display-only. */
   adpTrend: "up" | "down" | "";
+  /** Value over replacement (projected pts above the position's replacement
+   *  level), and rank by VOR. null when no projections were supplied. */
+  vor: number | null;
+  vorRank: number | null;
+  /** vorRank - board rank: negative = VOR values him higher than the room. */
+  vorGap: number | null;
 }
 
 export interface Board {
@@ -111,6 +122,9 @@ export interface BuildBoardOptions {
   blendStrength?: number;
   /** ISO time the intel was gathered (for the rendered "as of" line). */
   intelAsOf?: string;
+  /** Full league settings — enables the VOR column when entries carry
+   *  `projectedPoints`. */
+  leagueSettings?: LeagueSettings;
 }
 
 const NON_FLAGGED_POSITIONS: ReadonlySet<Position> = new Set(["K", "DEF"]);
@@ -156,16 +170,38 @@ export function buildBoard(entries: readonly BoardEntry[], options: BuildBoardOp
     .sort((a, b) => sortKey(a) - sortKey(b))
     .forEach((e, i) => adpRankById.set(e.player.id, i + 1));
 
+  // VOR — needs league settings + season projections. Offense only (`computeVor`
+  // has no IDP replacement model). Computed over the whole entries pool (not the
+  // position-filtered `pool`) so replacement levels are right even with `--pos`.
+  const vorPool = entries.filter(
+    (e) => OFFENSE.has(e.player.position) && (e.projectedPoints ?? 0) > 0,
+  );
+  const vorById =
+    options.leagueSettings && vorPool.length > 0
+      ? computeVor(
+          vorPool.map((e) => ({ ...e.player, projectedPoints: e.projectedPoints! })),
+          options.leagueSettings,
+        )
+      : undefined;
+
   const seasonImpact = (id: string): number => intel?.get(id)?.seasonImpact ?? 0;
   const effectiveKey = (e: BoardEntry): number =>
     blend ? sortKey(e) - seasonImpact(e.player.id) * blendStrength : sortKey(e);
 
   const ordered = [...pool].sort((a, b) => effectiveKey(a) - effectiveKey(b));
 
+  // Dense board rank among offense only, so vorGap compares like with like
+  // (vorRank is over the offense pool; the raw board rank includes IDP/K/DEF).
+  const offenseBoardRank = new Map<string, number>();
+  ordered
+    .filter((e) => OFFENSE.has(e.player.position))
+    .forEach((e, i) => offenseBoardRank.set(e.player.id, i + 1));
+
   const rows: BoardRow[] = ordered.map((e, i) => {
     const rank = i + 1;
     const rowIntel = intel?.get(e.player.id);
     const adpRank = adpRankById.get(e.player.id) ?? rank;
+    const vorRes = vorById?.get(e.player.id);
     const yahooExpertPos = expertPosById.get(e.player.id) ?? null;
     const yahooGap =
       e.adp != null && yahooExpertPos != null ? yahooExpertPos - rank : null;
@@ -200,6 +236,9 @@ export function buildBoard(entries: readonly BoardEntry[], options: BuildBoardOp
       intelImpact: rowIntel?.seasonImpact ?? 0,
       adpChange: e.adpChange ?? null,
       adpTrend: adpTrendOf(e.adpChange),
+      vor: vorRes?.vor ?? null,
+      vorRank: vorRes?.vorRank ?? null,
+      vorGap: vorRes ? vorRes.vorRank - (offenseBoardRank.get(e.player.id) ?? rank) : null,
     };
   });
 

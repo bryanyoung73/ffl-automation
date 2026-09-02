@@ -79,6 +79,9 @@ async function main(): Promise<void> {
       console.log(`  ${bundle.intel.size} players with notes`);
     }
 
+    const withVor = entries.some((e) => (e.projectedPoints ?? 0) > 0);
+    if (withVor) console.log("  season projections present — VOR enabled");
+
     const board = buildBoard(entries, {
       teams: league.teams,
       threshold,
@@ -87,6 +90,7 @@ async function main(): Promise<void> {
       intel,
       blend,
       intelAsOf,
+      leagueSettings: league,
     });
     const { markdown, csv, summary } = renderBoard(board);
 

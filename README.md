@@ -86,7 +86,7 @@ Chrome dance.
 | --- | --- |
 | `npm run login:chrome` | Launch your real Chrome (debug port + dedicated profile) to sign in. |
 | `npm run login` | Attach to that Chrome (or fall back to a bundled browser) and save the session. |
-| `npm run cheatsheet` | Draft board: players by ADP, snake-round tiers, flags where the **FantasyPros consensus (ECR)** disagrees with ADP, plus a Chatter column from news/injury intel. Writes `output/cheatsheet-<date>.{md,csv}`. Read-only. |
+| `npm run cheatsheet` | Draft board: players by ADP, snake-round tiers, flags where the **FantasyPros consensus (ECR)** disagrees with ADP, a **VOR** column (value over replacement, from season projections), plus a Chatter column from news/injury intel. Writes `output/cheatsheet-<date>.{md,csv}`. Read-only. |
 | `npm run cheatsheet -- --no-ecr` | Skip the ECR fetch; flag against the source's own rank instead. |
 | `npm run cheatsheet -- --threshold 25` | Stricter flag bar (default 18). |
 | `npm run cheatsheet -- --pos QB` | One position only. |
