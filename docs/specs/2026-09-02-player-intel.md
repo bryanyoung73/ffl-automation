@@ -1,0 +1,142 @@
+# Player intel: a shared chatter/news signal for draft + weekly
+
+Date: 2026-09-02
+Status: approved (design); not started
+
+## Problem
+
+The draft cheat sheet ranks purely on ADP vs the platform's expert rank. The
+weekly lineup optimizer ranks purely on the platform's projected points. Neither
+sees what's actually being said about a player right now — injury and practice
+status, depth-chart moves, coach/player quotes, camp buzz. We want one signal
+that captures that "internet chatter" and feeds **both** pipelines.
+
+## Scope
+
+**In:** A provider-agnostic `src/intel/` module producing `PlayerIntel` per
+player (numeric impact + human-readable notes + freshness), consumed by:
+- the draft cheat sheet (`buildBoard`) — annotate, optionally re-score
+- the weekly path (`show-roster`, `set-lineup`) — adjust effective projected
+  points before the optimizer runs
+
+**Out (for now):** trade/waiver advice, multi-week projections, a hosted UI.
+LLM-derived notes are Phase 3.
+
+## Key idea: horizon-weighted impact
+
+The same raw fact carries different weight by context:
+- **Draft** cares about season-long outlook — role, holdout, durability, camp.
+  An injury *today* barely matters (months to heal).
+- **Weekly** cares about this-week availability — practice participation
+  (DNP/LP/FP), Friday game-status designation, weather, snap-count trend.
+  Long-term role stuff matters less.
+
+So every note is tagged `horizon: "season" | "week" | "both"`, and the provider
+emits both `seasonImpact` and `weekImpact` (−3..+3). Each consumer uses the one
+it needs.
+
+## Shapes
+
+```ts
+interface IntelNote {
+  text: string;              // "DNP Wed/Thu; coach called him day-to-day"
+  source: string;            // "sleeper" | "espn-news" | "nfl-injury" | ...
+  url?: string;
+  horizon: "season" | "week" | "both";
+  asOf: string;              // ISO timestamp
+}
+
+interface PlayerIntel {
+  playerKey: string;         // normalized identity (see Matching)
+  notes: IntelNote[];
+  seasonImpact: number;      // -3..+3
+  weekImpact: number;        // -3..+3
+  confidence: number;        // 0..1
+  asOf: string;              // newest note timestamp
+}
+
+interface IntelProvider {
+  name: string;
+  collect(ctx: { players: PlayerRef[]; week: number }): Promise<Map<string, Partial<PlayerIntel>>>;
+}
+```
+
+## Modules
+
+```
+src/intel/
+  types.ts        PlayerIntel, IntelNote, IntelProvider
+  match.ts        cross-provider player identity — Sleeper's dump ships espn_id
+                  + yahoo_id, so build name+team+pos -> sleeper_id once and use
+                  that as the join key for every source
+  providers/
+    sleeper.ts        injury_status, practice_participation, injury_body_part,
+                      trending adds                              [week + season]
+    espnNews.ts       site.api.espn.com/apis/fantasy/v3/games/ffl/news/players  [both]
+    injuryReport.ts   official NFL practice + game designation   [week]
+    vegas.ts          implied team total / spread                [week]
+    newsDigest.ts     LLM over beat-writer blurbs -> structured  [both]  (Phase 3)
+  collect.ts      run enabled providers, merge, cache to
+                  .cache/intel-<season>-wk<week>.json (short TTL during game week)
+  apply.ts        PURE:
+                    annotateBoard(entries, intel)      -> BoardEntry[] + notes
+                    adjustProjections(players, intel, {horizon:"week"})
+                                                       -> Player[] (points nudged) + notes
+```
+
+`collect.ts` / providers are the only impure part. `match.ts` and `apply.ts`
+stay pure and fixture-tested. LLM output is cached to disk so a run is
+reproducible and cheap.
+
+## Wiring
+
+- `cli/cheatsheet.ts`: after `provider.getDraftBoard()`, `annotateBoard(entries,
+  intel)`; `buildBoard` gains an optional `intel` input, renders a Notes column,
+  and with `--blend` composes an `adjustedRank` via the existing
+  `draft/diff.ts` / `Override` machinery.
+- `cli/show-roster.ts` + `cli/set-lineup.ts`: after `provider.getRoster()`,
+  `adjustProjections(players, intel, { horizon: "week" })`, then optimize as
+  today. Print each adjustment + reason
+  (`Kelce  14.2 -> 11.0  · DNP Wed/Thu`). `--dry-run` still shows everything and
+  submits nothing.
+- New `npm run intel` — preview / force-refresh the cache.
+- `--no-intel` on every command — bypass entirely.
+- Both outputs carry an "intel as of <timestamp>" line.
+
+## Re-score vs annotate (decided)
+
+- **Draft board:** annotate-only by default (you draft live and want the note,
+  not a silently reordered board). `--blend` opts into re-scoring.
+- **Weekly:** fold into the projection — that's the point of an automated
+  optimizer. The printed deltas + `--dry-run` keep it auditable. Optionally feed
+  the optimizer's existing `pinnedPlayerIds` as *soft* warnings.
+
+## Phases
+
+1. **`intel/` core + `match.ts` + `sleeper.ts` + `espnNews.ts` + `collect.ts`
+   cache, wired into the weekly path.** (~1.5–2 days) Lead here — structured
+   injury/practice data is the highest-value, most deterministic piece and it's
+   most useful week to week.
+2. **Wire the same intel into the draft board** — Notes column + optional
+   `--blend`. (~0.5–1 day)
+3. **`newsDigest.ts`** — LLM digest of coach/player quotes → structured notes
+   with citations, for both pipelines. (~1–2 days + API key + per-run cost)
+4. **`vegas.ts` + weather** as weekly projection inputs. (~1 day)
+
+## Testing
+
+- `match.spec.ts` — name/team/pos normalization, Sleeper id join, unmatched
+  players pass through untouched.
+- `apply.spec.ts` — `adjustProjections` nudges by `weekImpact` only, clamps,
+  leaves un-intel'd players alone; `annotateBoard` attaches notes without
+  reordering unless asked.
+- Provider specs run against saved fixtures (no live calls in CI).
+- LLM digest: fixture-in / JSON-out, schema-validated; never asserts on prose.
+
+## Open items
+
+- Beat-writer text source: RotoWire/FantasyPros API ($) vs scraping (fragile,
+  ToS). Phase 3 decision.
+- Impact scoring: hand-rules per signal type first; revisit a learned weighting
+  only if the hand-rules feel off after a few weeks.
+- Cache TTL tuning during game week (practice reports land Wed–Fri).
