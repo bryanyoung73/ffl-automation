@@ -3,11 +3,11 @@ import { normalizeName } from "../match.js";
 import type { IntelContext, IntelNote, IntelProvider, PartialIntel } from "../types.js";
 
 /**
- * ESPN player news — the most recent blurbs for each player. Phase 1 keeps this
- * light: every item becomes a readable note, but impact scoring only fires on
- * player-specific beat-writer blurbs (headline leads with the player's name),
- * never on roundup articles ("Do Draft list", "sleepers & breakouts") that
- * merely mention them. Real extraction is Phase 3 (LLM digest).
+ * ESPN player news — recent beat-writer blurbs for each player. Only items whose
+ * headline leads with the player's name are kept (`isPlayerBlurb`); roundup
+ * articles ("Do Draft list", "sleepers & breakouts") that merely mention the
+ * player are dropped entirely — they're noise as both a note and a signal.
+ * Keyword scoring on what's left stays timid; real extraction is Phase 3 (LLM).
  */
 
 const NEWS_TTL_MS = 3 * 60 * 60 * 1000;
@@ -67,6 +67,17 @@ export function scoreHeadline(text: string): Scored {
   return { week: 0, season: 0 };
 }
 
+/**
+ * Keep a blurb as a note only if it's actually about availability / usage —
+ * not a "bold predictions" / "red flag" opinion piece that happens to lead with
+ * the name.
+ */
+export function isActionable(text: string): boolean {
+  return /(practice|inactive|ruled|questionable|doubtful|injur|hamstring|ankle|knee|groin|shoulder|concussion|calf|hip|foot|back|snap|target|carr(?:y|ies)|first-team|starter|suspend|activat|placed on|return|limited|dnp|game-time|preseason|exhibition|did ?n.t play|did not play|will play|took part)/i.test(
+    text,
+  );
+}
+
 export const espnNewsProvider: IntelProvider = {
   name: "espn-news",
   async collect(ctx: IntelContext): Promise<Map<string, PartialIntel>> {
@@ -95,13 +106,13 @@ export const espnNewsProvider: IntelProvider = {
         let scoredAny = false;
         for (const it of items) {
           const headline = (it.headline ?? "").trim();
-          if (!headline) continue;
-          if (isPlayerBlurb(headline, p.name)) {
-            const s = scoreHeadline(`${headline} ${it.description ?? ""}`);
-            week += s.week;
-            season += s.season;
-            if (s.week !== 0 || s.season !== 0) scoredAny = true;
-          }
+          const blob = `${headline} ${it.description ?? ""}`;
+          // drop roundups (not name-led) and pure opinion pieces (nothing actionable)
+          if (!headline || !isPlayerBlurb(headline, p.name) || !isActionable(blob)) continue;
+          const s = scoreHeadline(blob);
+          week += s.week;
+          season += s.season;
+          if (s.week !== 0 || s.season !== 0) scoredAny = true;
           notes.push({
             text: headline,
             source: "espn-news",

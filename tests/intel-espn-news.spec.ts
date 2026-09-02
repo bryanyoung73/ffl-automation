@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { isPlayerBlurb, scoreHeadline } from "../src/intel/providers/espnNews.js";
+import { isPlayerBlurb, scoreHeadline, isActionable } from "../src/intel/providers/espnNews.js";
 
 test("isPlayerBlurb accepts beat-writer blurbs, rejects roundups", () => {
   expect(isPlayerBlurb("Gibbs had a strong day in the Lions' final practice", "Jahmyr Gibbs")).toBe(true);
@@ -11,6 +11,14 @@ test("isPlayerBlurb accepts beat-writer blurbs, rejects roundups", () => {
   ).toBe(false);
   expect(isPlayerBlurb("Fantasy football sleepers, busts and breakouts for 2026", "Jahmyr Gibbs")).toBe(false);
   expect(isPlayerBlurb("Adam Schefter's fantasy football cheat sheet", "A.J. Brown")).toBe(false);
+});
+
+test("isActionable keeps availability/usage blurbs, drops opinion pieces", () => {
+  expect(isActionable("Walker (ankle) was a full participant in Wednesday's practice")).toBe(true);
+  expect(isActionable("McLaurin will play in Saturday's preseason game")).toBe(true);
+  expect(isActionable("Judkins didn't play in Thursday's exhibition win")).toBe(true);
+  expect(isActionable("Why Garrett Wilson is a fantasy 'red flag' for Field Yates")).toBe(false);
+  expect(isActionable("Bold predictions for the 2026 season")).toBe(false);
 });
 
 test("scoreHeadline: unambiguous injury/return language only", () => {

@@ -1,4 +1,5 @@
 import type { PlayerRef, Position } from "./types.js";
+import type { PlayerIntel } from "../intel/types.js";
 
 export interface BoardEntry {
   player: PlayerRef;
@@ -29,6 +30,16 @@ export interface BoardRow {
   /** Snake round bucket: ceil(rank / teams). */
   tier: number;
   note: "" | "yahoo-hot" | "yahoo-cold";
+  /** Rank by pure ADP order (== rank unless the board was blended). */
+  adpRank: number;
+  /** adpRank - rank: >0 means chatter bumped this player up. 0 when not blended. */
+  blendShift: number;
+  /** Chatter/news intel for this player, if any. */
+  intel?: PlayerIntel;
+  /** Newest intel note text, "" if none — for the rendered Note column. */
+  intelNote: string;
+  /** intel.seasonImpact, or 0. */
+  intelImpact: number;
 }
 
 export interface Board {
@@ -42,6 +53,10 @@ export interface Board {
   /** Count of rows where abs(yahooVsAdp) >= threshold. */
   disagreements: number;
   verdict: string;
+  /** True when rows were reordered by chatter/news intel (`--blend`). */
+  blended: boolean;
+  /** ISO time the intel bundle was gathered, "" when no intel. */
+  intelAsOf: string;
 }
 
 export interface BuildBoardOptions {
@@ -62,6 +77,14 @@ export interface BuildBoardOptions {
   now?: Date;
   /** Data source name for rendered headers/labels. Default "Yahoo". */
   sourceLabel?: string;
+  /** Chatter/news intel keyed by player id. Attaches notes to every row. */
+  intel?: ReadonlyMap<string, PlayerIntel>;
+  /** Reorder the board by ADP shifted by each player's seasonImpact. */
+  blend?: boolean;
+  /** Board spots moved per point of seasonImpact when blending. Default teams * 0.6. */
+  blendStrength?: number;
+  /** ISO time the intel was gathered (for the rendered "as of" line). */
+  intelAsOf?: string;
 }
 
 const NON_FLAGGED_POSITIONS: ReadonlySet<Position> = new Set(["K", "DEF"]);
@@ -80,6 +103,9 @@ export function buildBoard(entries: readonly BoardEntry[], options: BuildBoardOp
   // into one low tier), so gaps out there are structural, not signal. Only flag
   // where both metrics are still ranking carefully — the first ~7 rounds.
   const flagWithin = options.flagWithin ?? teams * 7;
+  const intel = options.intel;
+  const blend = options.blend ?? false;
+  const blendStrength = options.blendStrength ?? teams * 0.6;
 
   const pool = positionFilter
     ? entries.filter((e) => e.player.position === positionFilter)
@@ -93,10 +119,22 @@ export function buildBoard(entries: readonly BoardEntry[], options: BuildBoardOp
     .sort((a, b) => a.xRank! - b.xRank!)
     .forEach((e, i) => expertPosById.set(e.player.id, i + 1));
 
-  const ordered = [...pool].sort((a, b) => sortKey(a) - sortKey(b));
+  // Pure ADP order first — gives every player an adpRank to measure blend moves against.
+  const adpRankById = new Map<string, number>();
+  [...pool]
+    .sort((a, b) => sortKey(a) - sortKey(b))
+    .forEach((e, i) => adpRankById.set(e.player.id, i + 1));
+
+  const seasonImpact = (id: string): number => intel?.get(id)?.seasonImpact ?? 0;
+  const effectiveKey = (e: BoardEntry): number =>
+    blend ? sortKey(e) - seasonImpact(e.player.id) * blendStrength : sortKey(e);
+
+  const ordered = [...pool].sort((a, b) => effectiveKey(a) - effectiveKey(b));
 
   const rows: BoardRow[] = ordered.map((e, i) => {
     const rank = i + 1;
+    const rowIntel = intel?.get(e.player.id);
+    const adpRank = adpRankById.get(e.player.id) ?? rank;
     const yahooExpertPos = expertPosById.get(e.player.id) ?? null;
     const yahooGap =
       e.adp != null && yahooExpertPos != null ? yahooExpertPos - rank : null;
@@ -121,6 +159,11 @@ export function buildBoard(entries: readonly BoardEntry[], options: BuildBoardOp
       yahooGap,
       tier: Math.ceil(rank / teams),
       note,
+      adpRank,
+      blendShift: blend ? adpRank - rank : 0,
+      intel: rowIntel,
+      intelNote: rowIntel?.notes[0]?.text ?? "",
+      intelImpact: rowIntel?.seasonImpact ?? 0,
     };
   });
 
@@ -135,6 +178,8 @@ export function buildBoard(entries: readonly BoardEntry[], options: BuildBoardOp
     rows,
     disagreements,
     verdict: verdict(disagreements, rows.length, sourceLabel),
+    blended: blend,
+    intelAsOf: options.intelAsOf ?? "",
   };
 }
 

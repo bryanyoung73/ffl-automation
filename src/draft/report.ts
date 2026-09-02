@@ -20,14 +20,25 @@ export function renderBoard(board: Board): RenderedBoard {
   const src = board.sourceLabel || "Yahoo";
   const NOTE_LABEL = noteLabels(src);
   const scope = board.positionFilter ? ` — ${board.positionFilter}` : "";
+  const orderNote = board.blended
+    ? `ordered by ADP blended with chatter (fallback ${src} rank)`
+    : `ordered by ADP (fallback ${src} rank)`;
   const lines: string[] = [
     `# Draft cheat sheet${scope}`,
     "",
-    `_${board.generatedAt}_ · ${board.teams}-team · ordered by ADP (fallback ${src} rank)`,
+    `_${board.generatedAt}_ · ${board.teams}-team · ${orderNote}`,
+    ...(board.intelAsOf ? [`chatter as of ${board.intelAsOf}`] : []),
     "",
     `**${board.verdict}**`,
     "",
   ];
+
+  const head = board.blended
+    ? `| # | Δ | Player | Pos | Team | Bye | ADP | ${src} | Flag | Chatter |`
+    : `| # | Player | Pos | Team | Bye | ADP | ${src} | Flag | Chatter |`;
+  const sep = board.blended
+    ? "| ---: | ---: | --- | --- | --- | ---: | ---: | ---: | --- | --- |"
+    : "| ---: | --- | --- | --- | ---: | ---: | ---: | --- | --- |";
 
   let currentTier = 0;
   for (const row of board.rows) {
@@ -37,13 +48,24 @@ export function renderBoard(board: Board): RenderedBoard {
         "",
         `## Tier ${currentTier}  (picks ${(currentTier - 1) * board.teams + 1}–${currentTier * board.teams})`,
         "",
-        `| # | Player | Pos | Team | Bye | ADP | ${src} | Flag |`,
-        "| ---: | --- | --- | --- | ---: | ---: | ---: | --- |",
+        head,
+        sep,
       );
     }
-    lines.push(
-      `| ${row.rank} | ${row.player.name} | ${row.player.position} | ${row.player.team} | ${row.player.bye ?? "—"} | ${fmt(row.adp)} | ${fmt(row.yahooExpertPos)} | ${NOTE_LABEL[row.note]} |`,
-    );
+    const chatter = chatterCell(row);
+    const cells = [
+      `${row.rank}`,
+      ...(board.blended ? [movementMark(row.blendShift)] : []),
+      row.player.name,
+      row.player.position,
+      row.player.team,
+      `${row.player.bye ?? "—"}`,
+      fmt(row.adp),
+      fmt(row.yahooExpertPos),
+      NOTE_LABEL[row.note],
+      chatter,
+    ];
+    lines.push(`| ${cells.join(" | ")} |`);
   }
 
   return {
@@ -53,12 +75,33 @@ export function renderBoard(board: Board): RenderedBoard {
   };
 }
 
+/** "+2" / "-1" season impact, blank at 0. */
+function chatterCell(row: BoardRow): string {
+  const i = row.intelImpact;
+  const tag = i > 0 ? `+${round1(i)}` : i < 0 ? `${round1(i)}` : "";
+  const note = row.intelNote ? truncate(row.intelNote, 44) : "";
+  return [tag, note].filter(Boolean).join(" · ");
+}
+
+function movementMark(shift: number): string {
+  if (shift > 0) return `▲${shift}`;
+  if (shift < 0) return `▼${-shift}`;
+  return "";
+}
+
+function truncate(s: string, n: number): string {
+  const clean = s.replace(/\s+/g, " ").trim();
+  return clean.length <= n ? clean : `${clean.slice(0, n - 1)}…`;
+}
+
 function boardCsv(rows: BoardRow[]): string {
   const header =
-    "rank,player,position,team,bye,adp,yahoo_expert_pos,yahoo_list_rank,xrank,yahoo_gap,tier,flag";
+    "rank,adp_rank,blend_shift,player,position,team,bye,adp,yahoo_expert_pos,yahoo_list_rank,xrank,yahoo_gap,tier,flag,intel_season,intel_week,intel_note,intel_sources";
   const body = rows.map((r) =>
     [
       r.rank,
+      r.adpRank,
+      r.blendShift,
       csvField(r.player.name),
       r.player.position,
       r.player.team,
@@ -70,6 +113,10 @@ function boardCsv(rows: BoardRow[]): string {
       r.yahooGap ?? "",
       r.tier,
       r.note,
+      r.intelImpact || "",
+      r.intel?.weekImpact ?? "",
+      csvField(r.intelNote),
+      csvField([...new Set((r.intel?.notes ?? []).map((n) => n.source))].join("|")),
     ].join(","),
   );
   return [header, ...body].join("\n");
@@ -89,6 +136,19 @@ function boardSummary(board: Board): string {
       lines.push(
         `  board #${r.rank} ${r.player.name} (${r.player.position}) — ADP ${fmt(r.adp)}, ${src} expert ~#${r.yahooExpertPos}  [${dir} by ${Math.abs(r.yahooGap ?? 0)}]`,
       );
+    }
+  }
+
+  const movers = board.rows
+    .filter((r) => r.intelImpact !== 0 || r.intelNote)
+    .sort((a, b) => Math.abs(b.intelImpact) - Math.abs(a.intelImpact))
+    .slice(0, 12);
+  if (movers.length) {
+    lines.push("", "Chatter:");
+    for (const r of movers) {
+      const move = board.blended && r.blendShift !== 0 ? ` [${movementMark(r.blendShift)}]` : "";
+      const imp = r.intelImpact ? ` (${r.intelImpact > 0 ? "+" : ""}${round1(r.intelImpact)})` : "";
+      lines.push(`  #${r.rank} ${r.player.name} (${r.player.position})${imp}${move} — ${r.intelNote || "see notes"}`);
     }
   }
   return lines.join("\n");

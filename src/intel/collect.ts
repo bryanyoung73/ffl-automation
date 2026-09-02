@@ -35,12 +35,14 @@ export function intelCacheDir(config: Config): string {
 export async function collectIntel(
   config: Config,
   players: readonly IntelPlayerRef[],
-  opts: { week?: number; force?: boolean; ttlMs?: number } = {},
+  opts: { week?: number; force?: boolean; ttlMs?: number; scope?: string } = {},
 ): Promise<IntelBundle> {
   const cacheDir = intelCacheDir(config);
   const week = opts.week ?? config.week ?? 0;
   const season = config.espn?.season ?? new Date().getFullYear();
-  const cacheName = `intel-${season}-wk${week}.json`;
+  // `scope` separates callers with different player sets (weekly roster vs the
+  // ~80-deep draft board) so one doesn't serve the other a thin cache.
+  const cacheName = `intel-${season}-${opts.scope ?? `wk${week}`}.json`;
 
   if (!opts.force) {
     const hit = readCache<CachedBundle>(cacheDir, cacheName, opts.ttlMs ?? DEFAULT_TTL_MS);

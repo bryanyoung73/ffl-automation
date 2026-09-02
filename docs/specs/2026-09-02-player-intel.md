@@ -1,7 +1,7 @@
 # Player intel: a shared chatter/news signal for draft + weekly
 
 Date: 2026-09-02
-Status: Phase 1 shipped; Phases 2–4 not started
+Status: Phases 1–2 shipped; Phases 3–4 not started
 
 ## Problem
 
@@ -166,8 +166,37 @@ Verified live against Sleeper + ESPN news for real players:
   ESPN blurb "on track to start Week 1" (+0.7) → net 0 week adjustment, +0.2
   season. Reads right.
 
-Not done: draft-board wiring (`annotateBoard` exists but no CLI, Phase 2),
-LLM digest (Phase 3), Vegas/weather (Phase 4). Couldn't exercise the full
-`roster`/`lineup` path end to end here — the ESPN league hadn't drafted and no
-Yahoo `.auth` session in this checkout; the pieces are unit-tested and the
-`collectIntel` path was probed directly.
+Not done at Phase 1: draft-board wiring, LLM digest (Phase 3), Vegas/weather
+(Phase 4). Couldn't exercise the full `roster`/`lineup` path end to end — the
+ESPN league hadn't drafted and no Yahoo `.auth` session in this checkout; the
+pieces are unit-tested and the `collectIntel` path was probed directly.
+
+## Addendum — Phase 2 shipped (2026-09-02)
+
+Draft board wired.
+
+- `buildBoard` takes `intel` (map) + `blend` + `blendStrength` + `intelAsOf`.
+  Every row gets `adpRank`, `blendShift`, `intel`, `intelNote`, `intelImpact`.
+  `--blend` re-sorts by `sortKey(e) - seasonImpact * (teams * 0.6)` — a ±3
+  buy/fade ≈ ±2 rounds — and records the move.
+- `renderBoard`: a `Chatter` column (impact tag + top note, truncated) on every
+  tier table; a `Δ` column and "ordered by ADP blended with chatter" header only
+  when blended; a `Chatter:` block in the console summary; CSV gains
+  `adp_rank, blend_shift, intel_season, intel_week, intel_note, intel_sources`.
+- `cheatsheet.ts`: `--blend`, `--no-intel`, `--intel-depth <n>` (default
+  `teams * 8` — only the draftable range is worth fetching news for),
+  `--refresh`. Intel uses `collectIntel(..., { scope: "draft" })` so its thin
+  top-N bundle never overwrites the weekly roster bundle.
+- `espnNews` tightened: a blurb is kept only if it's name-led **and**
+  `isActionable` (availability/usage words) — opinion/roundup pieces
+  ("bold predictions", "fantasy red flag") are dropped as note and signal.
+
+Verified live: `PROVIDER=espn npm run cheatsheet --blend --intel-depth 60`
+against league 1144783883. 56/60 players got notes; Tyler Warren
+"Questionable (Groin)" → −1 season → ▼6; trending adds and practice-return
+blurbs produce small +0.2–0.4 bumps. 71 unit tests (+ `board-intel.spec.ts`,
+`isActionable`).
+
+Known limitation carried to Phase 3: the displayed note is the newest, which
+isn't always the one that moved the number; keyword scoring is coarse. The LLM
+digest replaces both.

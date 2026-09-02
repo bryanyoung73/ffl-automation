@@ -10,7 +10,8 @@ Fantasy football automation with two back ends, chosen by `PROVIDER` in `.env`:
 Commands:
 
 - **`npm run cheatsheet`** — printable draft board ordered by ADP with tiers,
-  flagging where the source's expert rank disagrees with the draft room.
+  flagging where the source's expert rank disagrees with the draft room, with a
+  Chatter column from news/injury intel (`--blend` to reorder by it).
 - **`npm run roster`** — current roster with projections and injury status.
 - **`npm run lineup`** — optimize the weekly starting lineup from projections,
   show a diff, confirm, submit (`--dry-run` to just print).
@@ -84,14 +85,18 @@ Chrome dance.
 | --- | --- |
 | `npm run login:chrome` | Launch your real Chrome (debug port + dedicated profile) to sign in. |
 | `npm run login` | Attach to that Chrome (or fall back to a bundled browser) and save the session. |
-| `npm run cheatsheet` | Draft board: 300 players by ADP, snake-round tiers, flags where Yahoo's expert rank disagrees with ADP. Writes `output/cheatsheet-<date>.{md,csv}`. Read-only. |
+| `npm run cheatsheet` | Draft board: players by ADP, snake-round tiers, flags where the source's expert rank disagrees with ADP, plus a Chatter column from news/injury intel. Writes `output/cheatsheet-<date>.{md,csv}`. Read-only. |
 | `npm run cheatsheet -- --threshold 25` | Stricter flag bar (default 18). |
 | `npm run cheatsheet -- --pos QB` | One position only. |
-| `npm run roster` | Print current roster: slot, player, projection, injury status. Read-only. |
-| `npm run lineup` | Optimize the lineup, show a diff, confirm, submit. |
+| `npm run cheatsheet -- --blend` | Reorder the board by ADP shifted by chatter impact (shows a Δ column). |
+| `npm run cheatsheet -- --no-intel` | Skip the chatter pass. `--refresh` re-fetches it. |
+| `npm run intel` | Preview the chatter/news intel for the current roster (`--refresh`, `--season`). |
+| `npm run roster` | Current roster: slot, player, projection (chatter-adjusted), injury status. Read-only. |
+| `npm run lineup` | Optimize the lineup (on chatter-adjusted projections), show a diff, confirm, submit. |
 | `npm run lineup -- --dry-run` | Optimize and print only. Never submits. |
 | `npm run lineup -- --yes` | Skip the confirmation prompt. |
 | `npm run lineup -- --pin 12345` | Force player id `12345` to keep its current start slot (repeatable). |
+| `npm run lineup -- --no-intel` | Optimize on raw projections, no chatter adjustment. |
 | `npm test` | Unit tests + live page-object check (the live check auto-skips with no session). |
 | `npm run test:unit` | Optimizer unit tests only — fast, no browser. |
 | `npm run codegen` | Open Playwright codegen against Yahoo to grab real selectors. |

@@ -6,20 +6,29 @@ import { getProvider, providerLabel } from "../providers/index.js";
 import { buildBoard } from "../draft/board.js";
 import { renderBoard } from "../draft/report.js";
 import { POSITIONS, type Position } from "../draft/types.js";
+import { hasFlag } from "./prompt.js";
+import { collectIntel } from "../intel/collect.js";
+import type { PlayerIntel } from "../intel/types.js";
 
 /**
- * Build a printable draft cheat sheet from Yahoo's Edit Pre-Draft Ranks page:
- * every player ordered by ADP (fallback XRank), split into snake-round tiers,
- * with a flag wherever Yahoo's expert rank diverges from ADP. Read-only.
+ * Build a printable draft cheat sheet: every player ordered by ADP (fallback
+ * expert rank), split into snake-round tiers, flagged where the source's expert
+ * rank diverges from ADP, and annotated with chatter/news intel. Read-only.
  *
  * Flags:
- *   --threshold <n>   XRank-vs-ADP-rank gap to flag a player (default: env or 12)
- *   --pos <POS>       restrict to QB|RB|WR|TE|K|DEF
+ *   --threshold <n>    expert-vs-ADP-rank gap to flag a player (default: env)
+ *   --pos <POS>        restrict to QB|RB|WR|TE|K|DEF
+ *   --blend            reorder the board by ADP shifted by chatter impact
+ *   --no-intel         skip the chatter/news pass
+ *   --intel-depth <n>  players (by ADP) to gather intel for (default: teams * 8)
+ *   --refresh          force-refresh the intel cache
  */
 async function main(): Promise<void> {
   const config = loadConfig();
   const threshold = intFlag("threshold") ?? config.overrideThreshold;
   const positionFilter = posFlag();
+  const blend = hasFlag("blend");
+  const withIntel = !hasFlag("no-intel");
 
   const provider = getProvider(config);
   const sourceLabel = providerLabel(config);
@@ -32,11 +41,37 @@ async function main(): Promise<void> {
     const entries = await provider.getDraftBoard();
     console.log(`  ${entries.length} players (${entries.filter((p) => p.adp != null).length} with ADP)`);
 
+    let intel: ReadonlyMap<string, PlayerIntel> | undefined;
+    let intelAsOf = "";
+    if (withIntel) {
+      const depth = intFlag("intel-depth") ?? league.teams * 8;
+      const forIntel = [...entries]
+        .sort((a, b) => (a.adp ?? a.xRank ?? 9999) - (b.adp ?? b.xRank ?? 9999))
+        .slice(0, depth)
+        .map((e) => ({
+          id: e.player.id,
+          name: e.player.name,
+          team: e.player.team,
+          position: e.player.position,
+        }));
+      console.log(`Gathering chatter for the top ${forIntel.length}...`);
+      const bundle = await collectIntel(config, forIntel, {
+        scope: "draft",
+        force: hasFlag("refresh"),
+      });
+      intel = bundle.intel;
+      intelAsOf = bundle.fetchedAt;
+      console.log(`  ${bundle.intel.size} players with notes`);
+    }
+
     const board = buildBoard(entries, {
       teams: league.teams,
       threshold,
       position: positionFilter,
       sourceLabel,
+      intel,
+      blend,
+      intelAsOf,
     });
     const { markdown, csv, summary } = renderBoard(board);
 
