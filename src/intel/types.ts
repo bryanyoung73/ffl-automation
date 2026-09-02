@@ -58,6 +58,8 @@ export interface IntelContext {
   identity: (playerId: string) => PlayerIdentity | undefined;
   /** Absolute path to the on-disk cache dir (`.cache/`). */
   cacheDir: string;
+  /** Claude model id for the LLM digest provider. */
+  llmModel: string;
 }
 
 export interface IntelProvider {

@@ -9,6 +9,7 @@ import { applyWeeklyIntel, formatAdjustments } from "../intel/weekly.js";
  *
  * Flags:
  *   --no-intel   skip the chatter/news projection adjustment
+ *   --llm        use the LLM news digest (needs ANTHROPIC_API_KEY)
  *   --refresh    force-refresh the intel cache
  */
 async function main(): Promise<void> {
@@ -20,6 +21,7 @@ async function main(): Promise<void> {
     const { players, adjustments, fetchedAt, skipped } = await applyWeeklyIntel(config, rawPlayers, {
       skip: hasFlag("no-intel"),
       force: hasFlag("refresh"),
+      llm: hasFlag("llm"),
     });
 
     const rows = players

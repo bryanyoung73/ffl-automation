@@ -116,19 +116,21 @@ src/
   intel/               chatter/news signal for draft + weekly (spec 2026-09-02)
     types.ts  cache.ts  match.ts (Sleeper identity)  apply.ts (PURE merge +
     adjust)  collect.ts (orchestrator + disk cache)  weekly.ts (roster/lineup
-    entry)  providers/{sleeper,espnNews}.ts
+    entry)  providers/{sleeper, espnNewsFeed (shared fetch), espnNews (keyword),
+    newsDigest (LLM, --llm)}.ts
   cli/                 provider-agnostic: loadConfig() -> getProvider(config)
     launch-chrome.ts   `npm run login:chrome` (Yahoo)
     login.ts           `npm run login` (Yahoo; CDP attach or fallback)
     show-roster.ts     `npm run roster` (read-only; intel-adjusted)
     set-lineup.ts      `npm run lineup` (intel-adjusted projections)
-    cheatsheet.ts      `npm run cheatsheet` (--threshold/--pos/--blend/--no-intel) — SHIPPED
+    cheatsheet.ts      `npm run cheatsheet` (--threshold/--pos/--blend/--no-intel/--llm) — SHIPPED
     intel.ts           `npm run intel` — preview the roster's chatter
     prompt.ts
 tests/
   optimizer.spec.ts  vor.spec.ts  diff.spec.ts  report.spec.ts  board.spec.ts
   espn-maps.spec.ts  espn-league.spec.ts  board-intel.spec.ts
   intel-match.spec.ts  intel-apply.spec.ts  intel-espn-news.spec.ts
+  intel-news-digest.spec.ts
                        pure logic, no browser
   fixtures/espn-league.sample.json          hand-built; swap for a real dump
   lineup-page.spec.ts  draft-rankings-page.spec.ts
@@ -146,9 +148,16 @@ tests/
 Sources: Sleeper (`injury_status` / practice / trending — the workhorse) and
 ESPN player news (name-led actionable blurbs only; roundup/opinion articles are
 dropped). Bundles cache to `.cache/` (gitignored). `match.ts` joins players
-across providers via the Sleeper dump (`espn_id` + `yahoo_id`). Keyword scoring
-is deliberately timid — real news extraction is Phase 3 (LLM). `--no-intel`
-bypasses; `--refresh` re-fetches. See `docs/specs/2026-09-02-player-intel.md`.
+across providers via the Sleeper dump (`espn_id` + `yahoo_id`).
+
+News scoring has two modes: `espnNews` (keyword, default — deliberately timid)
+and `newsDigest` (LLM, opt-in via `--llm` or `INTEL_LLM=1`, needs
+`ANTHROPIC_API_KEY`; `INTEL_LLM_MODEL` defaults to `claude-opus-5`). The digest
+sends the actionable blurbs to Claude and gets back one structured
+week/season/confidence + a summary note; per-player results cache under
+`.cache/llm-digest/` keyed by a hash of the blurb text, so a `--refresh` that
+doesn't change the news costs nothing. `--no-intel` bypasses all of it;
+`--refresh` re-fetches. See `docs/specs/2026-09-02-player-intel.md`.
 
 ## Conventions
 

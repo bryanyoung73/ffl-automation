@@ -13,6 +13,7 @@ import { applyWeeklyIntel, formatAdjustments } from "../intel/weekly.js";
  *   --yes        skip the confirmation prompt
  *   --pin <id>   force a player to keep their current start slot; repeatable
  *   --no-intel   optimize on raw projections, no chatter adjustment
+ *   --llm        use the LLM news digest (needs ANTHROPIC_API_KEY)
  *   --refresh    force-refresh the intel cache
  */
 async function main(): Promise<void> {
@@ -32,6 +33,7 @@ async function main(): Promise<void> {
     const { players, adjustments, fetchedAt, skipped } = await applyWeeklyIntel(config, rawPlayers, {
       skip: hasFlag("no-intel"),
       force: hasFlag("refresh"),
+      llm: hasFlag("llm"),
     });
     if (!skipped) {
       const lines = formatAdjustments(adjustments);

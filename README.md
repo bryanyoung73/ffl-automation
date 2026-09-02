@@ -90,7 +90,8 @@ Chrome dance.
 | `npm run cheatsheet -- --pos QB` | One position only. |
 | `npm run cheatsheet -- --blend` | Reorder the board by ADP shifted by chatter impact (shows a Δ column). |
 | `npm run cheatsheet -- --no-intel` | Skip the chatter pass. `--refresh` re-fetches it. |
-| `npm run intel` | Preview the chatter/news intel for the current roster (`--refresh`, `--season`). |
+| `npm run cheatsheet -- --llm` | Use the Claude news digest instead of keyword scoring (needs `ANTHROPIC_API_KEY`). Works on `roster` / `lineup` / `intel` too. |
+| `npm run intel` | Preview the chatter/news intel for the current roster (`--refresh`, `--season`, `--llm`). |
 | `npm run roster` | Current roster: slot, player, projection (chatter-adjusted), injury status. Read-only. |
 | `npm run lineup` | Optimize the lineup (on chatter-adjusted projections), show a diff, confirm, submit. |
 | `npm run lineup -- --dry-run` | Optimize and print only. Never submits. |
@@ -118,6 +119,9 @@ Chrome dance.
 | `ESPN_SEASON` | _(current year)_ | e.g. `2026`. |
 | `ESPN_S2` / `ESPN_SWID` | — | Cookies for a private league (see above). |
 | `ESPN_WEEK` | _(current)_ | Pin a week; falls back to `YAHOO_WEEK` then ESPN's current period. |
+| `INTEL_LLM` | _(off)_ | `1` to default the Claude news digest on (same as passing `--llm`). |
+| `INTEL_LLM_MODEL` | `claude-opus-5` | Model for the digest. `claude-haiku-4-5` is ~15x cheaper. |
+| `ANTHROPIC_API_KEY` | — | Required only when the LLM digest is used. Sleeper + ESPN news need no key. |
 
 ## Layout
 

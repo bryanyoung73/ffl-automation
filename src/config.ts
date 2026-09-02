@@ -72,6 +72,10 @@ export interface Config {
   preRankUrl: string;
   /** Default abs(rank) gap to flag a draft-board disagreement. */
   overrideThreshold: number;
+  /** Default the player-intel LLM digest on (INTEL_LLM). CLIs can still pass --llm. */
+  intelLlm: boolean;
+  /** Claude model id for the LLM digest (INTEL_LLM_MODEL). */
+  intelLlmModel: string;
   /** Present only when provider === "espn". */
   espn?: EspnConfig;
 }
@@ -134,6 +138,8 @@ export function loadConfig(): Config {
   const lineupUrl = week ? `${lineupBase}&week=${week}` : lineupBase;
 
   const overrideThreshold = optionalInt("DRAFT_OVERRIDE_THRESHOLD") ?? 18;
+  const intelLlm = /^(1|true|yes)$/i.test(process.env.INTEL_LLM?.trim() ?? "");
+  const intelLlmModel = process.env.INTEL_LLM_MODEL?.trim() || "claude-opus-5";
 
   return {
     provider,
@@ -147,6 +153,8 @@ export function loadConfig(): Config {
     outputDir: resolve(projectRoot, "output"),
     teamUrl,
     lineupUrl,
+    intelLlm,
+    intelLlmModel,
     leagueSettingsUrl: `${baseUrl}/f1/${leagueId}/settings`,
     preRankUrl: `${baseUrl}/f1/${leagueId}/${teamId}/editprerank`,
     overrideThreshold,

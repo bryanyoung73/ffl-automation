@@ -20,6 +20,7 @@ import type { PlayerIntel } from "../intel/types.js";
  *   --pos <POS>        restrict to QB|RB|WR|TE|K|DEF
  *   --blend            reorder the board by ADP shifted by chatter impact
  *   --no-intel         skip the chatter/news pass
+ *   --llm              use the LLM news digest (needs ANTHROPIC_API_KEY)
  *   --intel-depth <n>  players (by ADP) to gather intel for (default: teams * 8)
  *   --refresh          force-refresh the intel cache
  */
@@ -58,6 +59,7 @@ async function main(): Promise<void> {
       const bundle = await collectIntel(config, forIntel, {
         scope: "draft",
         force: hasFlag("refresh"),
+        llm: hasFlag("llm"),
       });
       intel = bundle.intel;
       intelAsOf = bundle.fetchedAt;

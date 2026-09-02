@@ -5,9 +5,13 @@ import { buildIdentityMap, loadSleeperPlayers } from "./match.js";
 import { mergeIntel } from "./apply.js";
 import { sleeperProvider } from "./providers/sleeper.js";
 import { espnNewsProvider } from "./providers/espnNews.js";
+import { newsDigestProvider } from "./providers/newsDigest.js";
 import type { IntelContext, IntelPlayerRef, IntelProvider, PlayerIntel } from "./types.js";
 
-const PROVIDERS: IntelProvider[] = [sleeperProvider, espnNewsProvider];
+/** `--llm` swaps the keyword news provider for the LLM digest. */
+function providersFor(llm: boolean): IntelProvider[] {
+  return [sleeperProvider, llm ? newsDigestProvider : espnNewsProvider];
+}
 
 /** Merged intel keyed by input player id, plus when it was gathered. */
 export interface IntelBundle {
@@ -35,14 +39,15 @@ export function intelCacheDir(config: Config): string {
 export async function collectIntel(
   config: Config,
   players: readonly IntelPlayerRef[],
-  opts: { week?: number; force?: boolean; ttlMs?: number; scope?: string } = {},
+  opts: { week?: number; force?: boolean; ttlMs?: number; scope?: string; llm?: boolean } = {},
 ): Promise<IntelBundle> {
   const cacheDir = intelCacheDir(config);
   const week = opts.week ?? config.week ?? 0;
   const season = config.espn?.season ?? new Date().getFullYear();
+  const llm = opts.llm ?? config.intelLlm;
   // `scope` separates callers with different player sets (weekly roster vs the
-  // ~80-deep draft board) so one doesn't serve the other a thin cache.
-  const cacheName = `intel-${season}-${opts.scope ?? `wk${week}`}.json`;
+  // ~80-deep draft board); the llm tag keeps keyword and digested bundles apart.
+  const cacheName = `intel-${season}-${opts.scope ?? `wk${week}`}${llm ? "-llm" : ""}.json`;
 
   if (!opts.force) {
     const hit = readCache<CachedBundle>(cacheDir, cacheName, opts.ttlMs ?? DEFAULT_TTL_MS);
@@ -64,10 +69,11 @@ export async function collectIntel(
     season,
     identity: (id) => identityMap.get(id),
     cacheDir,
+    llmModel: config.intelLlmModel,
   };
 
   const results = await Promise.all(
-    PROVIDERS.map((p) =>
+    providersFor(llm).map((p) =>
       p.collect(ctx).catch((err: unknown) => {
         console.warn(`intel: ${p.name} failed — ${(err as Error).message}`);
         return new Map();

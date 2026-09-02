@@ -9,6 +9,7 @@ import { hasFlag } from "./prompt.js";
  * Flags:
  *   --refresh    ignore the cache; re-fetch every source
  *   --season     show season-horizon impact instead of week
+ *   --llm        use the LLM news digest (needs ANTHROPIC_API_KEY)
  */
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -16,7 +17,10 @@ async function main(): Promise<void> {
   const provider = getProvider(config);
   try {
     const { players } = await provider.getRoster(config.week);
-    const bundle = await collectIntel(config, players, { force: hasFlag("refresh") });
+    const bundle = await collectIntel(config, players, {
+      force: hasFlag("refresh"),
+      llm: hasFlag("llm"),
+    });
 
     console.log(
       `Intel for ${players.length} players · week ${bundle.week} · as of ${bundle.fetchedAt}\n`,

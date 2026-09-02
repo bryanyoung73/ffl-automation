@@ -1,7 +1,7 @@
 # Player intel: a shared chatter/news signal for draft + weekly
 
 Date: 2026-09-02
-Status: Phases 1–2 shipped; Phases 3–4 not started
+Status: Phases 1–3 shipped; Phase 4 not started
 
 ## Problem
 
@@ -200,3 +200,36 @@ blurbs produce small +0.2–0.4 bumps. 71 unit tests (+ `board-intel.spec.ts`,
 Known limitation carried to Phase 3: the displayed note is the newest, which
 isn't always the one that moved the number; keyword scoring is coarse. The LLM
 digest replaces both.
+
+## Addendum — Phase 3 shipped (2026-09-02)
+
+LLM news digest, opt-in.
+
+- `providers/espnNewsFeed.ts` — shared fetch/filter (`fetchPlayerNews`,
+  `isPlayerBlurb`, `isActionable`). `espnNews` and `newsDigest` both read it.
+- `providers/newsDigest.ts` — for each player, sends the actionable blurbs to
+  Claude via a forced `record_intel` tool (`{week_impact, season_impact,
+  confidence, summary}`, all range-checked in the pure `parseDigest`). The
+  summary becomes note[0] (`source: "llm-digest"`); the raw blurbs follow. The
+  summary is the fix for "displayed note isn't the one that moved the number".
+  `buildDigestInput` / `parseDigest` are pure and unit-tested; no live call in
+  CI. Concurrency capped at 5.
+- Per-player result cached to `.cache/llm-digest/<espnId>-<sha1(blurbs)>.json`
+  (7-day TTL). Content-addressed, so `--refresh` only re-calls players whose
+  news actually changed.
+- Opt-in: `--llm` flag on `cheatsheet` / `roster` / `lineup` / `intel`, or
+  `INTEL_LLM=1`. `INTEL_LLM_MODEL` defaults to `claude-opus-5`
+  (`collectIntel({ llm })` swaps `espnNews` -> `newsDigest`; bundle cache tag
+  `-llm` keeps the two apart). Missing `ANTHROPIC_API_KEY` -> one warning, falls
+  back to Sleeper-only (verified live). `@anthropic-ai/sdk` added as a dep.
+- 75 unit tests (+ `intel-news-digest.spec.ts`).
+
+Not verified live — no Anthropic key in this checkout. The prompt, tool schema,
+parse/clamp, caching, concurrency, provider swap, and graceful no-key
+degradation are all unit-tested / smoke-tested; the actual model call and its
+output quality are the user's to confirm (`--llm` on a real key). Expect prompt
+tuning after the first real batch.
+
+## Open item for Phase 4
+
+Vegas lines + weather as weekly projection inputs — unchanged from the plan.

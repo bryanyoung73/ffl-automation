@@ -19,12 +19,12 @@ export interface WeeklyIntelResult {
 export async function applyWeeklyIntel(
   config: Config,
   players: readonly Player[],
-  opts: { skip?: boolean; force?: boolean } = {},
+  opts: { skip?: boolean; force?: boolean; llm?: boolean } = {},
 ): Promise<WeeklyIntelResult> {
   if (opts.skip) {
     return { players: [...players], adjustments: [], fetchedAt: "", skipped: true };
   }
-  const bundle = await collectIntel(config, players, { force: opts.force });
+  const bundle = await collectIntel(config, players, { force: opts.force, llm: opts.llm });
   const { players: adjusted, adjustments } = adjustProjections(players, bundle.intel, {
     horizon: "week",
   });
