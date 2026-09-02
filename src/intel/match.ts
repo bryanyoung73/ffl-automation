@@ -27,6 +27,10 @@ export interface SleeperPlayer {
   practice_description?: string | null;
   news_updated?: number | null;
   active?: boolean;
+  depth_chart_order?: number | null;
+  depth_chart_position?: string | null;
+  age?: number | null;
+  years_exp?: number | null;
 }
 
 const SUFFIXES = new Set(["jr", "sr", "ii", "iii", "iv", "v"]);

@@ -29,7 +29,7 @@ interface EspnPlayer {
   byeWeek?: number;
   eligibleSlots?: number[];
   injuryStatus?: string;
-  ownership?: { averageDraftPosition?: number };
+  ownership?: { averageDraftPosition?: number; averageDraftPositionPercentChange?: number };
   draftRanksByRankType?: Record<string, { rank?: number } | undefined>;
   stats?: Array<{
     statSourceId?: number;
@@ -150,6 +150,7 @@ export function mapPlayerPoolEntry(
     xRank: typeof xRank === "number" && xRank > 0 ? xRank : null,
     adp: adpRaw > 0 ? adpRaw : null,
     listRank: index + 1,
+    adpChange: p.ownership?.averageDraftPositionPercentChange ?? null,
   };
 }
 

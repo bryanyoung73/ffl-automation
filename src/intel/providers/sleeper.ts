@@ -81,6 +81,59 @@ function playerNotesAndImpact(sp: SleeperPlayer): PartialIntel {
   return { notes, weekImpact, confidence: 0.75 };
 }
 
+/**
+ * Depth-chart standing + age-curve risk from the Sleeper player record. Pure.
+ * Season-horizon (a backup or an aging RB is a draft concern), though a backup
+ * also won't help you this week.
+ */
+export function rolePartial(sp: SleeperPlayer): PartialIntel {
+  const pos = (sp.position ?? "").toUpperCase();
+  const notes: IntelNote[] = [];
+  let seasonImpact = 0;
+  let weekImpact = 0;
+  const asOf = new Date().toISOString();
+
+  const order = sp.depth_chart_order;
+  if (typeof order === "number" && order >= 2 && ["QB", "RB", "WR", "TE"].includes(pos)) {
+    if (pos === "QB") {
+      seasonImpact -= 3;
+      weekImpact -= 3;
+      notes.push({ text: `Backup QB (depth chart ${order})`, source: "sleeper", horizon: "both", asOf });
+    } else {
+      const hit = order >= 3 ? 1.5 : 0.8;
+      seasonImpact -= hit;
+      weekImpact -= hit * 0.5;
+      notes.push({
+        text: `Behind the starter on the depth chart (${pos}${order})`,
+        source: "sleeper",
+        horizon: "both",
+        asOf,
+      });
+    }
+  }
+
+  const age = sp.age;
+  if (typeof age === "number") {
+    let hit = 0;
+    if (pos === "RB" && age >= 31) hit = 0.9;
+    else if (pos === "RB" && age >= 29) hit = 0.4;
+    else if ((pos === "WR" || pos === "TE") && age >= 34) hit = 0.6;
+    else if ((pos === "WR" || pos === "TE") && age >= 32) hit = 0.3;
+    else if (pos === "QB" && age >= 38) hit = 0.4;
+    if (hit > 0) {
+      seasonImpact -= hit;
+      notes.push({ text: `Age ${age} — ${pos} age-curve risk`, source: "sleeper", horizon: "season", asOf });
+    }
+  }
+
+  if (sp.years_exp === 0) {
+    notes.push({ text: "Rookie — role still projecting", source: "sleeper", horizon: "season", asOf });
+  }
+
+  if (notes.length === 0) return {};
+  return { notes, seasonImpact, weekImpact, confidence: 0.6 };
+}
+
 function trendingImpact(rank: number): number {
   if (rank < 10) return 0.8;
   if (rank < 25) return 0.5;
@@ -113,6 +166,8 @@ export const sleeperProvider: IntelProvider = {
       if (sp) {
         const inj = playerNotesAndImpact(sp);
         if (inj.notes) parts.push(inj);
+        const role = rolePartial(sp);
+        if (role.notes) parts.push(role);
       }
 
       const rank = trendRank.get(sid);

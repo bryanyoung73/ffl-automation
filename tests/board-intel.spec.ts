@@ -82,6 +82,27 @@ test("renderBoard shows a Chatter column, and a Δ column only when blended", ()
   expect(blended.markdown).toContain("| Δ |");
 });
 
+test("adpChange becomes an up/down trend past the threshold, display-only", () => {
+  seq = 1;
+  const entries: BoardEntry[] = [
+    { ...entry(1, "Riser"), adpChange: 0.7 },
+    { ...entry(2, "Faller"), adpChange: -0.9 },
+    { ...entry(3, "Drift"), adpChange: 0.1 },
+    { ...entry(4, "NoData") },
+  ];
+  const board = buildBoard(entries, { teams: 10 });
+  const byName = Object.fromEntries(board.rows.map((r) => [r.player.name, r]));
+  expect(byName.Riser!.adpTrend).toBe("up");
+  expect(byName.Faller!.adpTrend).toBe("down");
+  expect(byName.Drift!.adpTrend).toBe("");
+  expect(byName.NoData!.adpTrend).toBe("");
+  // order is untouched by adpChange
+  expect(board.rows.map((r) => r.player.name)).toEqual(["Riser", "Faller", "Drift", "NoData"]);
+
+  const { markdown } = renderBoard(board);
+  expect(markdown).toMatch(/Riser \| RB \| KC \| 7 \| 1 ↑ \|/);
+});
+
 test("csv carries the intel columns", () => {
   seq = 1;
   const entries = [entry(1, "A"), entry(2, "B")];

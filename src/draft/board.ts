@@ -9,6 +9,12 @@ export interface BoardEntry {
   adp: number | null;
   /** Position in Yahoo's current pre-rank list. */
   listRank: number;
+  /**
+   * Recent ADP movement, if the source reports it (ESPN
+   * `ownership.averageDraftPositionPercentChange`). Positive = rising in
+   * drafts. Display-only — does not affect ordering.
+   */
+  adpChange?: number | null;
 }
 
 export interface BoardRow {
@@ -40,6 +46,10 @@ export interface BoardRow {
   intelNote: string;
   /** intel.seasonImpact, or 0. */
   intelImpact: number;
+  /** Raw ADP % change from the source, or null. Display-only. */
+  adpChange: number | null;
+  /** "up" / "down" when ADP is moving fast, else "". Display-only. */
+  adpTrend: "up" | "down" | "";
 }
 
 export interface Board {
@@ -164,6 +174,8 @@ export function buildBoard(entries: readonly BoardEntry[], options: BuildBoardOp
       intel: rowIntel,
       intelNote: rowIntel?.notes[0]?.text ?? "",
       intelImpact: rowIntel?.seasonImpact ?? 0,
+      adpChange: e.adpChange ?? null,
+      adpTrend: adpTrendOf(e.adpChange),
     };
   });
 
@@ -196,4 +208,11 @@ export function verdict(disagreements: number, total: number, sourceLabel = "Yah
 
 function sortKey(e: BoardEntry): number {
   return e.adp ?? e.xRank ?? e.listRank + 1000;
+}
+
+/** Flag only fast movers; the field is a fractional change, mostly small drift. */
+const ADP_TREND_THRESHOLD = 0.4;
+function adpTrendOf(change: number | null | undefined): "up" | "down" | "" {
+  if (typeof change !== "number" || Math.abs(change) < ADP_TREND_THRESHOLD) return "";
+  return change > 0 ? "up" : "down";
 }

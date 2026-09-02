@@ -145,13 +145,18 @@ tests/
 - **draft** (`cheatsheet`): `buildBoard({ intel, blend })` — annotates a Chatter
   column by default; `--blend` reorders by ADP shifted by `seasonImpact`.
 
-Sources: Sleeper (`injury_status` / practice / trending — the workhorse), ESPN
-player news (name-led actionable blurbs only; roundup/opinion articles are
-dropped), and — weekly only — Vegas via the ESPN scoreboard (implied team total
-from the O/U + spread, plus light game-script and weather nuance by position;
-`vegas.ts` is pure + unit-tested, not run for the draft board). Bundles cache to
-`.cache/` (gitignored). `match.ts` joins players across providers via the
-Sleeper dump (`espn_id` + `yahoo_id`).
+Sources: Sleeper (`injury_status` / practice / trending, plus depth-chart order
+and age-curve risk — the workhorse), ESPN player news (name-led actionable
+blurbs only; roundup/opinion articles are dropped), and — weekly only — Vegas
+via the ESPN scoreboard (implied team total from the O/U + spread, plus light
+game-script and weather nuance by position; `vegas.ts` is pure + unit-tested,
+not run for the draft board). Bundles cache to `.cache/` (gitignored).
+`match.ts` joins players across providers via the Sleeper dump (`espn_id` +
+`yahoo_id`).
+
+The draft board also carries `BoardEntry.adpChange` (ESPN
+`averageDraftPositionPercentChange`) → an `↑`/`↓` next to the ADP number for
+fast movers. Display-only; does not affect ordering or `--blend`.
 
 News scoring has two modes: `espnNews` (keyword, default — deliberately timid)
 and `newsDigest` (LLM, opt-in via `--llm` or `INTEL_LLM=1`, needs

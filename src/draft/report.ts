@@ -60,7 +60,7 @@ export function renderBoard(board: Board): RenderedBoard {
       row.player.position,
       row.player.team,
       `${row.player.bye ?? "—"}`,
-      fmt(row.adp),
+      `${fmt(row.adp)}${adpArrow(row.adpTrend)}`,
       fmt(row.yahooExpertPos),
       NOTE_LABEL[row.note],
       chatter,
@@ -89,6 +89,11 @@ function movementMark(shift: number): string {
   return "";
 }
 
+/** ADP momentum arrow next to the ADP number. */
+function adpArrow(trend: BoardRow["adpTrend"]): string {
+  return trend === "up" ? " ↑" : trend === "down" ? " ↓" : "";
+}
+
 function truncate(s: string, n: number): string {
   const clean = s.replace(/\s+/g, " ").trim();
   return clean.length <= n ? clean : `${clean.slice(0, n - 1)}…`;
@@ -96,7 +101,7 @@ function truncate(s: string, n: number): string {
 
 function boardCsv(rows: BoardRow[]): string {
   const header =
-    "rank,adp_rank,blend_shift,player,position,team,bye,adp,yahoo_expert_pos,yahoo_list_rank,xrank,yahoo_gap,tier,flag,intel_season,intel_week,intel_note,intel_sources";
+    "rank,adp_rank,blend_shift,player,position,team,bye,adp,adp_change,yahoo_expert_pos,yahoo_list_rank,xrank,yahoo_gap,tier,flag,intel_season,intel_week,intel_note,intel_sources";
   const body = rows.map((r) =>
     [
       r.rank,
@@ -107,6 +112,7 @@ function boardCsv(rows: BoardRow[]): string {
       r.player.team,
       r.player.bye ?? "",
       r.adp ?? "",
+      r.adpChange ?? "",
       r.yahooExpertPos ?? "",
       r.listRank,
       r.xRank ?? "",

@@ -254,9 +254,29 @@ Verified live against the ESPN scoreboard: implied totals compute correctly
 (KC -3 vs DEN → 22.8; DET -7 → 28.3), game-script and position nuance apply,
 neutral matchups land near zero.
 
+## Addendum — cheap wins (2026-09-02)
+
+Three small, high-value signals for the draft board, added after Phase 4:
+
+- **Depth-chart role** (`sleeper.ts` `rolePartial`, pure) — `depth_chart_order
+  >= 2`: backup QB → −3 season/week; RB/WR/TE behind the starter → −0.8
+  (order 2) / −1.5 (order 3+). Note names the slot ("… (RB2)").
+- **Age-curve risk** (same fn) — RB age ≥29 → −0.4, ≥31 → −0.9; WR/TE ≥32 →
+  −0.3, ≥34 → −0.6; QB ≥38 → −0.4. `years_exp === 0` adds a "Rookie" context
+  note, no impact.
+- **ADP momentum** — `BoardEntry.adpChange` from ESPN
+  `averageDraftPositionPercentChange`; `board.ts` turns `|change| >= 0.4` into
+  `adpTrend` `up`/`down`, rendered as `↑`/`↓` beside the ADP number, plus an
+  `adp_change` CSV column. Display-only — no ordering / `--blend` effect (the
+  field's exact semantics are ESPN's).
+
+`intel-sleeper-role.spec.ts` + an `adpChange` case in `board-intel.spec.ts`.
+87 unit tests. Verified live: Davante Adams flagged "(WR2)" −1.1, Kyren
+Williams / Judkins / Swift show `↑`.
+
 ## Status
 
-All four phases shipped. The full weekly stack: Sleeper (injury/practice) +
+All four phases plus the cheap wins shipped. The full weekly stack: Sleeper (injury/practice) +
 news (keyword or `--llm` digest) + Vegas → adjusted projections into the
 optimizer. Draft: Sleeper + news → Chatter column / `--blend`. Live-verified
 except the exact model output quality of the LLM digest, which depends on the
