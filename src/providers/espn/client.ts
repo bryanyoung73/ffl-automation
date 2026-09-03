@@ -21,11 +21,16 @@ export class EspnClient {
    * GET the league resource with one or more `?view=` params. Pass `filter` to
    * send an `x-fantasy-filter` header (already JSON-stringified by the caller).
    * Extra query params (e.g. `forTeamId`, `scoringPeriodId`) go in `params`.
-   * Identical requests within one process are served from an in-memory memo.
+   * Identical requests within one process are served from an in-memory memo;
+   * pass `noCache` for endpoints that change during a run (the live draft).
    */
   async get<T = unknown>(
     views: string[],
-    opts: { filter?: string; params?: Record<string, string | number> } = {},
+    opts: {
+      filter?: string;
+      params?: Record<string, string | number>;
+      noCache?: boolean;
+    } = {},
   ): Promise<T> {
     const url = new URL(this.cfg.readBaseUrl);
     for (const v of views) url.searchParams.append("view", v);
@@ -34,8 +39,10 @@ export class EspnClient {
     }
 
     const key = `${url.href}\n${opts.filter ?? ""}`;
-    const cached = this.getCache.get(key);
-    if (cached) return cached as Promise<T>;
+    if (!opts.noCache) {
+      const cached = this.getCache.get(key);
+      if (cached) return cached as Promise<T>;
+    }
 
     const headers: Record<string, string> = {
       Cookie: this.cookieHeader(),
@@ -46,8 +53,10 @@ export class EspnClient {
     const p = fetch(url, { headers }).then((res) =>
       this.parse<T>(res, `GET ${url.pathname}${url.search}`),
     );
-    this.getCache.set(key, p);
-    p.catch(() => this.getCache.delete(key)); // don't cache a rejection
+    if (!opts.noCache) {
+      this.getCache.set(key, p);
+      p.catch(() => this.getCache.delete(key)); // don't cache a rejection
+    }
     return p;
   }
 

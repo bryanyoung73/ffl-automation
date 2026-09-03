@@ -1,0 +1,24 @@
+{
+  "_comment": "Hand-built mDraftDetail slice: 10-team snake, mid-draft (15 picks / 1.5 rounds). Team 5 is us. Pick 3 is a keeper. Round 2 reverses the team order.",
+  "draftDetail": {
+    "drafted": false,
+    "inProgress": true,
+    "picks": [
+      { "overallPickNumber": 1, "roundId": 1, "roundPickNumber": 1, "teamId": 1, "playerId": 4362628, "keeper": false },
+      { "overallPickNumber": 2, "roundId": 1, "roundPickNumber": 2, "teamId": 2, "playerId": 4239996, "keeper": false },
+      { "overallPickNumber": 3, "roundId": 1, "roundPickNumber": 3, "teamId": 3, "playerId": 3116406, "keeper": true },
+      { "overallPickNumber": 4, "roundId": 1, "roundPickNumber": 4, "teamId": 4, "playerId": 4426502, "keeper": false },
+      { "overallPickNumber": 5, "roundId": 1, "roundPickNumber": 5, "teamId": 5, "playerId": 3916387, "keeper": false },
+      { "overallPickNumber": 6, "roundId": 1, "roundPickNumber": 6, "teamId": 6, "playerId": 4241457, "keeper": false },
+      { "overallPickNumber": 7, "roundId": 1, "roundPickNumber": 7, "teamId": 7, "playerId": 4047365, "keeper": false },
+      { "overallPickNumber": 8, "roundId": 1, "roundPickNumber": 8, "teamId": 8, "playerId": 4429795, "keeper": false },
+      { "overallPickNumber": 9, "roundId": 1, "roundPickNumber": 9, "teamId": 9, "playerId": 4595348, "keeper": false },
+      { "overallPickNumber": 10, "roundId": 1, "roundPickNumber": 10, "teamId": 10, "playerId": 4569618, "keeper": false },
+      { "overallPickNumber": 11, "roundId": 2, "roundPickNumber": 1, "teamId": 10, "playerId": 4360438, "keeper": false },
+      { "overallPickNumber": 12, "roundId": 2, "roundPickNumber": 2, "teamId": 9, "playerId": 4258173, "keeper": false },
+      { "overallPickNumber": 13, "roundId": 2, "roundPickNumber": 3, "teamId": 8, "playerId": 4362887, "keeper": false },
+      { "overallPickNumber": 14, "roundId": 2, "roundPickNumber": 4, "teamId": 7, "playerId": 3128390, "keeper": false },
+      { "overallPickNumber": 15, "roundId": 2, "roundPickNumber": 5, "teamId": 6, "playerId": 4374302, "keeper": false }
+    ]
+  }
+}

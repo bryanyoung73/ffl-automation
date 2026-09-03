@@ -38,6 +38,13 @@ export class YahooLeague implements LeagueProvider {
     }));
   }
 
+  async getDraftState(): Promise<never> {
+    throw new Error(
+      "Live draft assistant is ESPN-only — Yahoo drafts run off-platform. " +
+        "Set PROVIDER=espn.",
+    );
+  }
+
   async getRoster(): Promise<RosterReadResult> {
     const { page } = await this.ensureSession();
     const lineup = new LineupPage(page, this.config);

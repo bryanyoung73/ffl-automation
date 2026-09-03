@@ -2,7 +2,7 @@ import type { Config, EspnConfig } from "../../config.js";
 import type { BoardEntry } from "../../draft/board.js";
 import type { LeagueSettings, Position, SlotCode } from "../../draft/types.js";
 import type { LineupPlan, Player } from "../../lineup/types.js";
-import type { LeagueProvider, RosterReadResult } from "../types.js";
+import type { DraftPick, DraftState, LeagueProvider, RosterReadResult } from "../types.js";
 import { EspnClient } from "./client.js";
 import {
   derivePosition,
@@ -72,11 +72,27 @@ interface EspnSettings {
   draftSettings?: { type?: string };
 }
 
+interface EspnDraftPick {
+  overallPickNumber?: number;
+  roundId?: number;
+  roundPickNumber?: number;
+  teamId?: number;
+  playerId?: number;
+  keeper?: boolean;
+}
+
+interface EspnDraftDetail {
+  drafted?: boolean;
+  inProgress?: boolean;
+  picks?: EspnDraftPick[];
+}
+
 interface LeagueResponse {
   scoringPeriodId?: number;
   settings?: EspnSettings;
   teams?: EspnTeam[];
   players?: PlayerPoolEntry[];
+  draftDetail?: EspnDraftDetail;
 }
 
 /* ------------------------------------------------------------------ *
@@ -189,6 +205,32 @@ export function mapPlayerPoolEntry(
   };
 }
 
+/**
+ * ESPN `mDraftDetail` → a provider-agnostic draft snapshot. Picks are returned
+ * in draft order; keeper picks are kept and flagged (a rostered player is
+ * unavailable however he got there). Entries with no real `playerId` (empty
+ * future slots some leagues pre-populate) are dropped.
+ */
+export function mapDraftState(raw: LeagueResponse): DraftState {
+  const d = raw.draftDetail ?? {};
+  const picks: DraftPick[] = (d.picks ?? [])
+    .filter((p) => typeof p.playerId === "number" && p.playerId > 0)
+    .map((p) => ({
+      overall: p.overallPickNumber ?? 0,
+      round: p.roundId ?? 0,
+      pickInRound: p.roundPickNumber ?? 0,
+      teamId: p.teamId ?? 0,
+      playerId: String(p.playerId),
+      keeper: p.keeper === true,
+    }))
+    .sort((a, b) => a.overall - b.overall);
+  return {
+    drafted: d.drafted === true,
+    inProgress: d.inProgress === true,
+    picks,
+  };
+}
+
 /* ------------------------------------------------------------------ *
  * Lineup writes.
  * ------------------------------------------------------------------ */
@@ -276,6 +318,12 @@ export class EspnLeague implements LeagueProvider {
     });
     const players = raw.players ?? [];
     return players.map((e, i) => mapPlayerPoolEntry(e, i, scoring, this.espn.season));
+  }
+
+  async getDraftState(): Promise<DraftState> {
+    // The draft changes pick-by-pick during a run — never serve it from the memo.
+    const raw = await this.client.get<LeagueResponse>(["mDraftDetail"], { noCache: true });
+    return mapDraftState(raw);
   }
 
   async getRoster(week?: number): Promise<RosterReadResult> {
