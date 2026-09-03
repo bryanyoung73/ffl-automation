@@ -1,7 +1,8 @@
 # Live draft assistant
 
 Date: 2026-09-03
-Status: spec — not started
+Status: v1 shipped (phases 1–5) — see addenda. Live pick-by-pick verification
+pending an actual ESPN draft.
 
 ## Problem
 
@@ -411,6 +412,43 @@ Also smoke-tested against the **live ESPN board** (real VOR/ECR/ADP) with a
 synthesised mid-round-3 snake state: correctly read a 2-RB roster, returned six
 WRs ("fills your 1st WR slot"), flagged a coin-flip on a player whose ADP sat
 on my next pick, and detected an RB run (5 of the last 10).
+
+## Addendum — Phase 5 shipped (2026-09-03)
+
+Built `src/cli/draft.ts` → `npm run draft` (ESPN only; a `PROVIDER=yahoo` run
+exits with a message). `assembleBoard` once, then a poll loop:
+`provider.getDraftState()` every `--interval` s (default 5, min 2); when
+`picks.length` changes, `computeAdvice` → `console.clear()` + reprint. Fetch
+errors back off ×2 to a 30 s cap and retry. `state.drafted` → final render +
+exit. `SIGINT` wakes an abortable sleep and exits clean via `finally`
+(`provider.close()`).
+
+Flags: `--slot <n>` (validated against `league.teams`, else auto-detect),
+`--interval`, `--top` (default 6), `--once` (single render, no clear, exit),
+`--no-ecr` / `--no-intel` / `--llm` / `--refresh` (passed to `assembleBoard`).
+
+Render (plain ASCII, no TUI dep): a `DRAFT  pick 1.01 (overall 1)   your next:
+overall 5 (+4)   0% done` header (`>>> ON THE CLOCK <<<` when it's my pick), a
+one-line-per-position roster block, `Pick now` (rank / name / pos / team / ADP /
+VOR + the reason clauses), `Tier cliffs`, `Runs`, and an `intel as of` line.
+
+`package.json` `draft` script added. README + CLAUDE.md updated. Typecheck
+clean, 145 unit tests pass (phase 5 is I/O + formatting — no new unit tests; the
+`draft-assistant` suite covers the logic).
+
+Verified live (`--once`) against the real ESPN league (undrafted, plus a
+synthesised mid-round state): board assembles, turn math correct for `--slot 5`
+in a 10-team, recommendations rank by need-weighted VOR with reason clauses,
+tier cliffs populate, the poll loop stays quiet while picks are unchanged and
+`timeout`/Ctrl-C exit cleanly.
+
+**Tuning knobs found in the live run** (all module constants, expected):
+- `survival.ts` sigma floor of 4 makes ADP 1–2 players read "coin-flip to last
+  to 5" at pick 5 — too generous at the very top of the board. Lower the floor
+  (or scale sigma from 0 for tiny ADP).
+- `context.ts` `VOR_TIER_GAP` of 12 cuts RB tiers after a single player when ECR
+  is unavailable (`--no-ecr`); the ECR-tier path groups correctly. Raise the
+  fallback gap, or lean on ECR.
 
 ## Open items / risks
 

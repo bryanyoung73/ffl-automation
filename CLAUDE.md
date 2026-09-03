@@ -17,6 +17,11 @@ TypeScript automation for a fantasy football team, against Yahoo or ESPN
    `docs/specs/2026-09-03-waiver-wire.md`.
 4. **Player intel** (`src/intel/`) — chatter/news/injury/Vegas signal feeding
    1–3.
+5. **Live draft assistant** (`npm run draft`, ESPN only) — polls `mDraftDetail`,
+   subtracts drafted players from the board, and prints ranked need-adjusted
+   pick recommendations with reasons (turn math, survival odds, tier cliffs,
+   positional runs). Snake only. See
+   `docs/specs/2026-09-03-live-draft-assistant.md`.
 
 Stack: `@playwright/test`, `tsx` for CLIs, ESM, strict TS. No framework.
 
@@ -116,9 +121,15 @@ src/
     board.ts           PURE cheat-sheet builder (ADP order, tiers, flags,
                        optional chatter blend) — SHIPPED
     report.ts          renderBoard() [shipped] + override renderers [v2, unused]
+    assemble.ts        assembleBoard() — shared getDraftBoard->ECR->intel->buildBoard
+                       pipeline (cheatsheet + draft)
     types.ts
     vor.ts  diff.ts     PURE, unit-tested, v2 — NOT wired
     signals/            SignalProvider interface + FantasyPros stub — v2
+    live/              PURE live-draft engine: snake.ts (turn math) needs.ts
+                       (roster -> PositionNeed) survival.ts (willLast) context.ts
+                       (tierCliffs/positionRuns) assistant.ts (computeAdvice ->
+                       DraftAdvice) types.ts
   intel/               chatter/news signal for draft + weekly (spec 2026-09-02)
     types.ts  cache.ts  match.ts (Sleeper identity)  apply.ts (PURE merge +
     adjust)  collect.ts (orchestrator + disk cache)  weekly.ts (roster/lineup
@@ -130,6 +141,7 @@ src/
     show-roster.ts     `npm run roster` (read-only; intel-adjusted)
     set-lineup.ts      `npm run lineup` (intel-adjusted projections)
     cheatsheet.ts      `npm run cheatsheet` (--threshold/--pos/--blend/--no-intel/--llm) — SHIPPED
+    draft.ts           `npm run draft` (ESPN) — live draft assistant (poll + render)
     intel.ts           `npm run intel` — preview the roster's chatter
     waivers.ts         `npm run waivers` (ESPN) — add/drop recommendations
     prompt.ts
@@ -141,8 +153,11 @@ tests/
   intel-match.spec.ts  intel-apply.spec.ts  intel-espn-news.spec.ts
   intel-news-digest.spec.ts  intel-vegas.spec.ts  intel-sleeper-role.spec.ts
   ecr.spec.ts  board-vor.spec.ts  waiver-value.spec.ts  waiver-pairs.spec.ts
+  espn-draft-state.spec.ts  draft-snake.spec.ts  draft-needs.spec.ts
+  draft-survival.spec.ts  draft-context.spec.ts  draft-assistant.spec.ts
                        pure logic, no browser
   fixtures/espn-league.sample.json          hand-built; swap for a real dump
+  fixtures/espn-draft-detail.sample.json    hand-built mid-draft mDraftDetail
   lineup-page.spec.ts  draft-rankings-page.spec.ts
                        live Yahoo checks, auto-skip without a session
 ```

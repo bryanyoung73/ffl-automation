@@ -10,6 +10,7 @@
     "roster": "tsx src/cli/show-roster.ts",
     "lineup": "tsx src/cli/set-lineup.ts",
     "cheatsheet": "tsx src/cli/cheatsheet.ts",
+    "draft": "tsx src/cli/draft.ts",
     "intel": "tsx src/cli/intel.ts",
     "waivers": "tsx src/cli/waivers.ts",
     "test": "playwright test",

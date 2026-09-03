@@ -16,6 +16,8 @@ Commands:
   (nudged weekly by injury/news chatter and Vegas implied totals).
 - **`npm run lineup`** — optimize the weekly starting lineup from projections,
   show a diff, confirm, submit (`--dry-run` to just print).
+- **`npm run draft`** — (ESPN) live draft assistant: polls the draft and prints
+  ranked, need-adjusted pick recommendations with reasons as picks come off.
 
 Same code path for both providers — only the data source changes.
 
@@ -93,6 +95,7 @@ Chrome dance.
 | `npm run cheatsheet -- --blend` | Reorder the board by ADP shifted by chatter impact (shows a Δ column). |
 | `npm run cheatsheet -- --no-intel` | Skip the chatter pass. `--refresh` re-fetches it. |
 | `npm run cheatsheet -- --llm` | Use the Claude news digest instead of keyword scoring (needs `ANTHROPIC_API_KEY`). Works on `roster` / `lineup` / `intel` too. |
+| `npm run draft` | (ESPN) Live draft assistant. Assembles the board once, then polls `mDraftDetail` and re-renders a ranked, need-adjusted pick list with reasons (turn math, "will he last?", tier cliffs, positional runs). Snake only. `--slot <n>` (else auto-detected from your round-1 pick), `--interval <s>` (default 5), `--top <n>` (default 6), `--once` (print once and exit), `--no-ecr` / `--no-intel` / `--llm` / `--refresh`. Read-only. |
 | `npm run intel` | Preview the chatter/news intel for the current roster (`--refresh`, `--season`, `--llm`). |
 | `npm run waivers` | (ESPN) Add/drop recommendations: ranks free agents + your bench by a blended value, pairs each worthwhile add with its best legal drop, lists DEF/K streams. `--win-now`, `--pos`, `--limit`, `--csv`, `--llm`. Read-only. |
 | `npm run roster` | Current roster: slot, player, projection (chatter-adjusted), injury status. Read-only. |
