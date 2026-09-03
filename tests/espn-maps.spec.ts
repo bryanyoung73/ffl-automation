@@ -29,7 +29,8 @@ test("slotCode collapses flex variants to W/R/T and defaults unknown to BN", () 
   expect(slotCode(17)).toBe("K");
   expect(slotCode(20)).toBe("BN");
   expect(slotCode(21)).toBe("IR");
-  for (const flex of [3, 5, 7, 23]) expect(slotCode(flex)).toBe("W/R/T");
+  for (const flex of [3, 5, 23]) expect(slotCode(flex)).toBe("W/R/T");
+  expect(slotCode(7)).toBe("OP"); // superflex is its own code
   expect(slotCode(999)).toBe("BN");
 });
 

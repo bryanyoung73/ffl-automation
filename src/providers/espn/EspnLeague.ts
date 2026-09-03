@@ -15,8 +15,10 @@ import {
   draftBoardFilter,
   weeklyProjectedPoints,
   seasonProjectedPoints,
+  actualSeasonPoints,
   type ScoringKind,
 } from "./maps.js";
+import type { FreeAgent } from "../../waivers/types.js";
 
 /* ------------------------------------------------------------------ *
  * Loose shapes for the slices of ESPN's payloads we actually read.
@@ -30,7 +32,12 @@ interface EspnPlayer {
   byeWeek?: number;
   eligibleSlots?: number[];
   injuryStatus?: string;
-  ownership?: { averageDraftPosition?: number; averageDraftPositionPercentChange?: number };
+  ownership?: {
+    averageDraftPosition?: number;
+    averageDraftPositionPercentChange?: number;
+    percentOwned?: number;
+    percentChange?: number;
+  };
   draftRanksByRankType?: Record<string, { rank?: number } | undefined>;
   stats?: Array<{
     statSourceId?: number;
@@ -43,6 +50,8 @@ interface EspnPlayer {
 interface PlayerPoolEntry {
   id?: number;
   player?: EspnPlayer;
+  onTeamId?: number;
+  status?: string;
 }
 
 interface RosterEntry {
@@ -116,7 +125,7 @@ export function startingSlotCodes(raw: LeagueResponse): string[] {
   return out;
 }
 
-export function mapRosterEntry(entry: RosterEntry, week: number): Player {
+export function mapRosterEntry(entry: RosterEntry, week: number, season?: number): Player {
   const p = entry.playerPoolEntry?.player ?? {};
   const id = String(entry.playerId ?? p.id ?? "");
   return {
@@ -128,6 +137,28 @@ export function mapRosterEntry(entry: RosterEntry, week: number): Player {
     projectedPoints: weeklyProjectedPoints(p.stats, week),
     status: injuryStatus(p.injuryStatus),
     currentSlot: slotCode(entry.lineupSlotId),
+    seasonProjectedPoints: seasonProjectedPoints(p.stats, season),
+    pointsSoFar: season != null ? actualSeasonPoints(p.stats, season) : 0,
+  };
+}
+
+export function mapFreeAgent(entry: PlayerPoolEntry, week: number, season: number): FreeAgent {
+  const p = entry.player ?? {};
+  const o = p.ownership ?? {};
+  return {
+    id: String(p.id ?? entry.id ?? ""),
+    name: (p.fullName ?? "").trim(),
+    team: proTeamAbbr(p.proTeamId),
+    position: derivePosition(p.eligibleSlots, p.defaultPositionId),
+    eligibleSlots: eligibleSlotCodes(p.eligibleSlots),
+    weekProj: weeklyProjectedPoints(p.stats, week),
+    seasonProj: seasonProjectedPoints(p.stats, season),
+    actualSoFar: actualSeasonPoints(p.stats, season),
+    availability: (entry.status ?? "").toUpperCase().includes("WAIV") ? "WAIVERS" : "FA",
+    pctOwned: typeof o.percentOwned === "number" ? o.percentOwned : 0,
+    pctChange: typeof o.percentChange === "number" ? o.percentChange : 0,
+    status: injuryStatus(p.injuryStatus),
+    bye: p.byeWeek && p.byeWeek > 0 ? p.byeWeek : null,
   };
 }
 
@@ -259,8 +290,21 @@ export class EspnLeague implements LeagueProvider {
       );
     }
     const entries = team.roster?.entries ?? [];
-    const players = entries.map((e) => mapRosterEntry(e, targetWeek));
+    const players = entries.map((e) => mapRosterEntry(e, targetWeek, this.espn.season));
     return { players, startingSlotCodes: startingSlotCodes(raw) };
+  }
+
+  async getFreeAgents(week?: number): Promise<FreeAgent[]> {
+    const targetWeek = week ?? this.week ?? (await this.currentScoringPeriod());
+    const filter = JSON.stringify({
+      players: {
+        filterStatus: { value: ["FREEAGENT", "WAIVERS"] },
+        limit: 200,
+        sortPercOwned: { sortPriority: 1, sortAsc: false },
+      },
+    });
+    const raw = await this.client.get<LeagueResponse>(["kona_player_info"], { filter });
+    return (raw.players ?? []).map((e) => mapFreeAgent(e, targetWeek, this.espn.season));
   }
 
   async applyLineup(plan: LineupPlan, opts: { dryRun: boolean }): Promise<void> {

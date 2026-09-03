@@ -45,6 +45,13 @@ export class YahooLeague implements LeagueProvider {
     return lineup.readRoster();
   }
 
+  async getFreeAgents(): Promise<never> {
+    throw new Error(
+      "Waiver-wire analysis is ESPN-only for now (needs a free-agent list with " +
+        "projections). Set PROVIDER=espn.",
+    );
+  }
+
   async applyLineup(plan: LineupPlan, opts: { dryRun: boolean }): Promise<void> {
     const { page } = await this.ensureSession();
     const lineup = new LineupPage(page, this.config);

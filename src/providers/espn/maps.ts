@@ -24,9 +24,10 @@ export function proTeamAbbr(id: number | null | undefined): string {
 
 /**
  * Lineup slot id -> internal slot code. Offensive flex variants (RB/WR, WR/TE,
- * OP/superflex, RB/WR/TE) collapse to "W/R/T". IDP slots keep their own codes
- * ("LB", "DL", "DB", ...) so IDP leagues don't silently lose starting slots;
- * the pure optimizer treats any code generically.
+ * RB/WR/TE flex collapses to "W/R/T"; the OP / superflex slot (which also takes
+ * a QB) is its own code "OP", so a QB isn't treated as flex-eligible in a
+ * league with no superflex slot. IDP slots keep their own codes ("LB", "DL",
+ * ...). The pure optimizer treats any code generically.
  */
 export const SLOT_CODE_BY_ID: Record<number, string> = {
   0: "QB",
@@ -36,7 +37,7 @@ export const SLOT_CODE_BY_ID: Record<number, string> = {
   4: "WR",
   5: "W/R/T", // WR/TE
   6: "TE",
-  7: "W/R/T", // OP / superflex
+  7: "OP", // OP / superflex — QB-eligible, distinct from the RB/WR/TE flex
   8: "DT",
   9: "DE",
   10: "LB",
@@ -182,6 +183,21 @@ export function seasonProjectedPoints(
   const hit =
     (season != null && projected.find((s) => s.seasonId === season)) ||
     projected[0];
+  return hit?.appliedTotal ?? 0;
+}
+
+/**
+ * Actual fantasy points scored so far this season (`statSourceId === 0`,
+ * `statSplitTypeId === 0`). ESPN has no rest-of-season projection, so ROS is
+ * approximated as `seasonProjectedPoints - actualSeasonPoints`.
+ */
+export function actualSeasonPoints(
+  stats: readonly StatEntry[] | null | undefined,
+  season: number,
+): number {
+  const hit = (stats ?? []).find(
+    (s) => s.statSourceId === 0 && s.statSplitTypeId === 0 && s.seasonId === season,
+  );
   return hit?.appliedTotal ?? 0;
 }
 

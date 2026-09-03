@@ -28,6 +28,10 @@ export interface Player {
   status: PlayerStatus;
   /** Slot the player currently occupies, e.g. "WR", "BN", "W/R/T". */
   currentSlot: string;
+  /** Full-season projected points, when the provider has it (ESPN). Waiver-wire. */
+  seasonProjectedPoints?: number;
+  /** Fantasy points scored so far this season, when available (ESPN). Waiver-wire. */
+  pointsSoFar?: number;
 }
 
 /** What a provider returns from a roster read: the players plus the current

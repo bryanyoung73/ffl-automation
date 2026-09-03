@@ -1,6 +1,7 @@
 import type { BoardEntry } from "../draft/board.js";
 import type { LeagueSettings } from "../draft/types.js";
 import type { LineupPlan, RosterReadResult } from "../lineup/types.js";
+import type { FreeAgent } from "../waivers/types.js";
 
 export type { RosterReadResult } from "../lineup/types.js";
 
@@ -16,6 +17,8 @@ export interface LeagueProvider {
   getDraftBoard(): Promise<BoardEntry[]>;
   /** This team's current roster + the starting slot codes to fill. */
   getRoster(week?: number): Promise<RosterReadResult>;
+  /** Available players (free agents + waivers) with week/season projections. */
+  getFreeAgents(week?: number): Promise<FreeAgent[]>;
   /** Push a computed lineup. `dryRun` computes/validates but never writes. */
   applyLineup(plan: LineupPlan, opts: { dryRun: boolean }): Promise<void>;
   /** Release any resources (browser, sockets). Safe to call more than once. */

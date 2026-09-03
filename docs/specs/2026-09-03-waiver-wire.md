@@ -1,7 +1,7 @@
 # Waiver wire: who to add, who to drop
 
 Date: 2026-09-03
-Status: design only — not started
+Status: Phase 1 shipped; phases 2–4 not started
 
 ## Problem
 
@@ -143,12 +143,32 @@ tests/
 - Provider fetch stays out of CI — a captured FA-list fixture feeds the pure
   functions, same pattern as `espn-league.spec.ts`.
 
-## Open items
+## Addendum — Phase 1 shipped (2026-09-03)
 
-- **ROS projection shape** — verify whether ESPN's `kona_player_info` carries a
-  true rest-of-season projected total or only full-season (then approximate ROS
-  by `full * (weeks_left / 17)` or `full − actual_so_far`). Probe the `stats`
-  array like the VOR wiring did.
+Built: `src/waivers/{types,value,pairs}.ts`, `src/cli/waivers.ts`
+(`npm run waivers`), `LeagueProvider.getFreeAgents()` (ESPN:
+`kona_player_info` + `filterStatus ["FREEAGENT","WAIVERS"]`, mapped like the
+draft board + `mapFreeAgent`), Yahoo throws `NOT_SUPPORTED`. `Player` gained
+optional `seasonProjectedPoints` / `pointsSoFar`; `mapRosterEntry` fills them.
+`--win-now` / `--pos` / `--limit` / `--csv` / `--llm` / `--no-intel` /
+`--refresh`. `tests/waiver-{value,pairs}.spec.ts` — 12 new tests.
+
+**ROS projection** — confirmed: ESPN gives no rest-of-season total. `stats`
+carries `src=1/split=0/season=<year>` (full-season projection) and
+`src=0/split=0/season=<year>` (actual so far). `actualSeasonPoints()` added;
+`rosProjection = max(0, seasonProj − actualSoFar)`.
+
+**Superflex fix** (found while building this) — ESPN lineup slot `7` was mapped
+to `"W/R/T"`, so every QB (tagged OP-eligible) looked flex-eligible and could
+be paired as a drop for an RB add, or slotted into FLEX by the optimizer. Slot
+7 now maps to `"OP"`; `pairs.ts` only treats two players as competing for a
+flex role when the league actually starts that flex slot.
+
+Not live-verified end to end — the ESPN league is undrafted (empty roster). The
+FA fetch and the full value → pairs → render pipeline were exercised against a
+synthetic roster built from the FA pool; unit tests cover the pure logic.
+
+## Open items (phases 2+)
 - **Roster locks** — skip drop suggestions for players whose game has started;
   low priority.
 - **Standings-aware default** — a 1–5 team should default to `--win-now`, a 5–1

@@ -5,12 +5,18 @@ Context for AI assistants working in this repo.
 ## What this is
 
 TypeScript automation for a fantasy football team, against Yahoo or ESPN
-(see Providers). Two features:
-1. **Draft cheat sheet** (`npm run cheatsheet`) — shipped, verified live on
-   both providers (pre-draft only).
+(see Providers). Features:
+1. **Draft cheat sheet** (`npm run cheatsheet`) — ADP board + ECR/VOR/chatter.
+   Shipped, verified live (pre-draft only).
 2. **Weekly lineup optimizer** (`npm run roster` / `npm run lineup`) — verified
    live read-side on Yahoo; the real submit and the ESPN roster path are not
    yet exercised (see Current status).
+3. **Waiver wire** (`npm run waivers`, ESPN only) — ranks free agents + your
+   bench by a blended value (ROS + this week + buzz), pairs adds with legal
+   drops, lists DEF/K streams. Phase 1; see
+   `docs/specs/2026-09-03-waiver-wire.md`.
+4. **Player intel** (`src/intel/`) — chatter/news/injury/Vegas signal feeding
+   1–3.
 
 Stack: `@playwright/test`, `tsx` for CLIs, ESM, strict TS. No framework.
 
@@ -125,12 +131,16 @@ src/
     set-lineup.ts      `npm run lineup` (intel-adjusted projections)
     cheatsheet.ts      `npm run cheatsheet` (--threshold/--pos/--blend/--no-intel/--llm) — SHIPPED
     intel.ts           `npm run intel` — preview the roster's chatter
+    waivers.ts         `npm run waivers` (ESPN) — add/drop recommendations
     prompt.ts
+  waivers/             types.ts + value.ts (PURE blend) + pairs.ts (PURE
+                       add/drop pairing, protection rules, streaming)
 tests/
   optimizer.spec.ts  vor.spec.ts  diff.spec.ts  report.spec.ts  board.spec.ts
   espn-maps.spec.ts  espn-league.spec.ts  board-intel.spec.ts
   intel-match.spec.ts  intel-apply.spec.ts  intel-espn-news.spec.ts
-  intel-news-digest.spec.ts  intel-vegas.spec.ts
+  intel-news-digest.spec.ts  intel-vegas.spec.ts  intel-sleeper-role.spec.ts
+  ecr.spec.ts  board-vor.spec.ts  waiver-value.spec.ts  waiver-pairs.spec.ts
                        pure logic, no browser
   fixtures/espn-league.sample.json          hand-built; swap for a real dump
   lineup-page.spec.ts  draft-rankings-page.spec.ts
@@ -200,7 +210,9 @@ doesn't change the news costs nothing. `--no-intel` bypasses all of it;
   `fetch`). Test in isolation against fixtures.
 - ESPN id/slot/scoring maps in `maps.ts` are seeded from the community
   `espn-api` constants — calibrate against a real league dump before trusting
-  them (`defaultPositionId` scheme is the usual first fix).
+  them (`defaultPositionId` scheme is the usual first fix). Lineup slot 7
+  (OP / superflex) maps to `"OP"`, *not* `"W/R/T"` — ESPN tags every QB as
+  OP-eligible, so conflating them makes QBs look flex-eligible.
 - Never commit `.env`, `.auth/`, `output/` (all gitignored). Generated cheat
   sheets land in `output/`.
 - Commit only when the user asks.
