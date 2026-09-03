@@ -352,6 +352,31 @@ Built:
 `tests/draft-snake.spec.ts` (6) + `tests/draft-needs.spec.ts` (5), wired into
 `test:unit`. Typecheck clean, 121 unit tests pass.
 
+## Addendum — Phase 3 shipped (2026-09-03)
+
+Built:
+
+- `src/draft/live/survival.ts` (pure) — `willLast(adp, nextPickOverall) →
+  { prob, bucket }`. Draft slot modelled as `Normal(adp, sigma)` with
+  `sigma = clamp(adp * 0.15, 4, 18)` (deeper players go in a wider window);
+  `prob = P(slot ≥ my next pick)` via an inline erf/normal-CDF approximation.
+  Buckets: `< 0.15` gone, `< 0.6` coinflip, else safe. Null ADP →
+  `{ prob: null, bucket: "safe" }` — no signal, no penalty. Thresholds are
+  module constants.
+- `src/draft/live/context.ts` (pure):
+  - `tierCliffs(available, settings) → Cliff[]` — per QB/RB/WR/TE, prefers
+    FantasyPros ECR tiers (`row.ecrTier`), falls back to a VOR-gap cut (≥ 12),
+    skips a position with neither. Emits only when the tier is down to ≤ 3 and
+    the drop clears a floor (10 VOR pts / 8 ADP slots); `drop` is tagged
+    `"vor"` or `"adp"`.
+  - `positionRuns(state, board, window=teams) → Run[]` — count the last
+    `window` picks by position (picks off the board ignored); flags a position
+    at `≥ max(4, ceil(window/2))`, requires ≥ 6 picks in the window first.
+- `src/draft/live/types.ts` — added `Cliff`, `Run`.
+
+`tests/draft-survival.spec.ts` (6) + `tests/draft-context.spec.ts` (9), wired
+into `test:unit`. Typecheck clean, 136 unit tests pass.
+
 ## Open items / risks
 
 - ~~**Live auth is unverified.**~~ Resolved in Phase 1 — `mDraftDetail` returns

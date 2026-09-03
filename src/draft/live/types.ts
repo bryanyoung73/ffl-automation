@@ -3,7 +3,7 @@ import type { Position } from "../types.js";
 /**
  * Shared shapes for the live draft assistant (`npm run draft`). The engine's
  * output types (`DraftAdvice`, `Rec`, …) land here in a later phase; for now
- * this is the roster-need read that the turn/needs math produces.
+ * this is the roster-need read and the board-context signals.
  */
 
 /**
@@ -22,4 +22,28 @@ export interface PositionNeed {
   haveBench: number;
   /** Engine urgency multiplier: > 1 while a slot is open, a small floor once set. */
   weight: number;
+}
+
+/**
+ * A thinning value tier: only so many players left at `position` before a
+ * meaningful drop to the next tier. Emitted only when the tier is nearly
+ * exhausted and the drop is real.
+ */
+export interface Cliff {
+  position: Position;
+  /** Players still available in the current tier. */
+  remaining: number;
+  /** Their names, best first — for the render. */
+  players: string[];
+  /** Value lost between the last player in this tier and the next best. */
+  drop: number;
+  /** What `drop` is measured in: VOR points, or ADP slots. */
+  metric: "vor" | "adp";
+}
+
+/** A positional run: `count` of the last `window` picks went to `position`. */
+export interface Run {
+  position: Position;
+  count: number;
+  window: number;
 }
