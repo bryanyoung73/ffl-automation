@@ -6,7 +6,7 @@ import { getProvider, providerLabel } from "../providers/index.js";
 import { assembleBoard } from "../draft/assemble.js";
 import { renderBoard } from "../draft/report.js";
 import { POSITIONS, type Position } from "../draft/types.js";
-import { hasFlag } from "./prompt.js";
+import { hasFlag, intFlag, strFlag } from "./prompt.js";
 
 /**
  * Build a printable draft cheat sheet: every player ordered by ADP (fallback
@@ -58,19 +58,9 @@ async function main(): Promise<void> {
   }
 }
 
-function intFlag(name: string): number | undefined {
-  const args = process.argv.slice(2);
-  const i = args.indexOf(`--${name}`);
-  if (i === -1 || !args[i + 1]) return undefined;
-  const n = Number.parseInt(args[i + 1]!, 10);
-  return Number.isNaN(n) ? undefined : n;
-}
-
 function posFlag(): Position | null {
-  const args = process.argv.slice(2);
-  const i = args.indexOf("--pos");
-  if (i === -1 || !args[i + 1]) return null;
-  const p = args[i + 1]!.toUpperCase() as Position;
+  const p = strFlag("pos")?.toUpperCase() as Position | undefined;
+  if (!p) return null;
   if (!POSITIONS.includes(p)) throw new Error(`--pos must be one of ${POSITIONS.join(", ")}`);
   return p;
 }

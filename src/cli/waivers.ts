@@ -7,7 +7,7 @@ import { collectIntel } from "../intel/collect.js";
 import { valuePlayers, type ValueInput } from "../waivers/value.js";
 import { buildAddDrops } from "../waivers/pairs.js";
 import type { AddDropPair } from "../waivers/types.js";
-import { hasFlag } from "./prompt.js";
+import { hasFlag, intFlag, strFlag } from "./prompt.js";
 
 /**
  * Waiver-wire add/drop recommendations (ESPN). Ranks the free-agent pool and
@@ -170,18 +170,6 @@ function toCsv(r: ReturnType<typeof buildAddDrops>): string {
 function csv(s: string): string {
   return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
-function strFlag(name: string): string | undefined {
-  const args = process.argv.slice(2);
-  const i = args.indexOf(`--${name}`);
-  return i === -1 ? undefined : args[i + 1];
-}
-function intFlag(name: string): number | undefined {
-  const v = strFlag(name);
-  if (v === undefined) return undefined;
-  const n = Number.parseInt(v, 10);
-  return Number.isNaN(n) ? undefined : n;
-}
-
 main().catch((err) => {
   console.error(err instanceof Error ? err.message : err);
   process.exit(1);

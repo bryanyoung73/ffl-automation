@@ -3,7 +3,7 @@ import { getProvider, providerLabel } from "../providers/index.js";
 import { assembleBoard } from "../draft/assemble.js";
 import { computeAdvice } from "../draft/live/assistant.js";
 import type { DraftAdvice, Rec } from "../draft/live/types.js";
-import { hasFlag } from "./prompt.js";
+import { hasFlag, intFlag } from "./prompt.js";
 
 /**
  * Live draft assistant (ESPN). Assembles the board once, then polls the draft
@@ -159,14 +159,6 @@ function sleep(ms: number, register: (wake: () => void) => void): Promise<void> 
       resolve();
     });
   });
-}
-
-function intFlag(name: string): number | undefined {
-  const args = process.argv.slice(2);
-  const i = args.indexOf(`--${name}`);
-  if (i === -1 || !args[i + 1]) return undefined;
-  const n = Number.parseInt(args[i + 1]!, 10);
-  return Number.isNaN(n) ? undefined : n;
 }
 
 main().catch((err) => {

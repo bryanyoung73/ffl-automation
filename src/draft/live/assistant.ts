@@ -5,7 +5,7 @@ import { mySlots, nextPick, picksUntilNext } from "./snake.js";
 import { myRoster, rosterNeeds } from "./needs.js";
 import { tierCliffs, positionRuns } from "./context.js";
 import { willLast, type Survival, type SurvivalBucket } from "./survival.js";
-import type { DraftAdvice, PositionNeed, Rec, RosterSlotView } from "./types.js";
+import type { Cliff, DraftAdvice, PositionNeed, Rec, RosterSlotView, Run } from "./types.js";
 
 const DEFAULT_TOP = 6;
 /** Additive nudges — small next to need-weighted value, so they only bite when
@@ -92,18 +92,20 @@ export function computeAdvice(input: AdviceInput): DraftAdvice {
     const surv: Survival =
       myNextOverall != null ? willLast(row.adp, myNextOverall) : { prob: null, bucket: "safe" };
 
-    const inCliff = cliffByPos.get(pos)?.players.includes(row.player.name) ?? false;
+    const tierCliff = cliffByPos.get(pos);
+    const inCliff = tierCliff?.players.includes(row.player.name) ?? false;
+    const run = runByPos.get(pos);
 
     let score = baseValue(row) * need.weight;
     score += SURVIVAL_BONUS[surv.bucket];
-    if (runByPos.has(pos)) score += RUN_BUMP;
+    if (run) score += RUN_BUMP;
     if (inCliff) score += CLIFF_BUMP;
 
-    return { row, need, surv, score, inCliff };
+    return { row, need, surv, score, cliff: inCliff ? tierCliff : undefined, run };
   });
   scored.sort((a, b) => b.score - a.score);
 
-  const recommendations: Rec[] = scored.slice(0, top).map(({ row, need, surv, score, inCliff }) => ({
+  const recommendations: Rec[] = scored.slice(0, top).map(({ row, need, surv, score, cliff, run }) => ({
     player: row.player,
     adp: row.adp,
     vor: row.vor,
@@ -112,7 +114,7 @@ export function computeAdvice(input: AdviceInput): DraftAdvice {
     needWeight: need.weight,
     survival: surv,
     score: round1(score),
-    reasons: buildReasons(row, need, surv, myNextOverall, inCliff ? cliffByPos.get(row.player.position) : undefined, runByPos.get(row.player.position)),
+    reasons: buildReasons(row, need, surv, myNextOverall, cliff, run),
   }));
 
   return { ...shell, recommendations, cliffs, runs };
@@ -165,8 +167,8 @@ function buildReasons(
   need: PositionNeed,
   surv: Survival,
   myNextOverall: number | null,
-  cliff: { remaining: number; drop: number; metric: "vor" | "adp" } | undefined,
-  run: { count: number; window: number } | undefined,
+  cliff: Cliff | undefined,
+  run: Run | undefined,
 ): string[] {
   const pos = row.player.position;
   const out: string[] = [];

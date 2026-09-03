@@ -1,6 +1,6 @@
 import type { Config } from "../config.js";
 import type { LeagueProvider } from "../providers/types.js";
-import { buildBoard, type Board, type BoardEntry } from "./board.js";
+import { buildBoard, type Board } from "./board.js";
 import type { LeagueSettings, Position } from "./types.js";
 import { fetchEcr, attachEcr } from "./ecr.js";
 import { collectIntel, intelCacheDir } from "../intel/collect.js";
@@ -33,14 +33,10 @@ export interface AssembleOptions {
 
 export interface AssembledBoard {
   league: LeagueSettings;
-  /** Post-ECR board entries — the raw pool, before `buildBoard` ordering. */
-  entries: BoardEntry[];
-  /** Chatter/news intel keyed by player id, `undefined` when skipped. */
-  intel?: ReadonlyMap<string, PlayerIntel>;
-  /** ISO time the intel bundle was gathered, "" when skipped. */
-  intelAsOf: string;
   /** The ordered, flagged, VOR/intel-annotated board. */
   board: Board;
+  /** ISO time the intel bundle was gathered, "" when skipped. */
+  intelAsOf: string;
 }
 
 /**
@@ -116,5 +112,5 @@ export async function assembleBoard(
     leagueSettings: league,
   });
 
-  return { league, entries, intel, intelAsOf, board };
+  return { league, board, intelAsOf };
 }
