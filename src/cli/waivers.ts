@@ -79,8 +79,9 @@ async function main(): Promise<void> {
       })),
     ];
     const values = valuePlayers(inputs, { settings, intelById, rosWeight });
-    const faValues = new Map([...values].filter(([id]) => fas.some((f) => f.id === id)));
-    const rosterValues = new Map([...values].filter(([id]) => roster.some((p) => p.id === id)));
+    const faIds = new Set(fas.map((f) => f.id));
+    const faValues = new Map([...values].filter(([id]) => faIds.has(id)));
+    const rosterValues = new Map([...values].filter(([id]) => !faIds.has(id)));
 
     const report = buildAddDrops(fas, faValues, roster, rosterValues, {
       week,

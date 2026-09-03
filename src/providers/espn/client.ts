@@ -7,6 +7,10 @@ import type { EspnConfig } from "../../config.js";
  * `espn_s2` + `SWID` cookies from a logged-in browser session.
  */
 export class EspnClient {
+  /** Per-process GET memo — league data doesn't change during a CLI run, and
+   *  several commands fetch `mSettings` more than once. */
+  private readonly getCache = new Map<string, Promise<unknown>>();
+
   constructor(private readonly cfg: EspnConfig) {}
 
   private cookieHeader(): string {
@@ -17,6 +21,7 @@ export class EspnClient {
    * GET the league resource with one or more `?view=` params. Pass `filter` to
    * send an `x-fantasy-filter` header (already JSON-stringified by the caller).
    * Extra query params (e.g. `forTeamId`, `scoringPeriodId`) go in `params`.
+   * Identical requests within one process are served from an in-memory memo.
    */
   async get<T = unknown>(
     views: string[],
@@ -28,14 +33,22 @@ export class EspnClient {
       url.searchParams.append(k, String(val));
     }
 
+    const key = `${url.href}\n${opts.filter ?? ""}`;
+    const cached = this.getCache.get(key);
+    if (cached) return cached as Promise<T>;
+
     const headers: Record<string, string> = {
       Cookie: this.cookieHeader(),
       Accept: "application/json",
     };
     if (opts.filter) headers["x-fantasy-filter"] = opts.filter;
 
-    const res = await fetch(url, { headers });
-    return this.parse<T>(res, `GET ${url.pathname}${url.search}`);
+    const p = fetch(url, { headers }).then((res) =>
+      this.parse<T>(res, `GET ${url.pathname}${url.search}`),
+    );
+    this.getCache.set(key, p);
+    p.catch(() => this.getCache.delete(key)); // don't cache a rejection
+    return p;
   }
 
   /** POST to a path relative to the write base, e.g. "transactions/". */
