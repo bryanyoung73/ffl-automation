@@ -22,7 +22,11 @@ import type {
  */
 
 const DIGEST_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-const CONCURRENCY = 5;
+/** Gentle by default — new API accounts have low rate limits. Override with
+ *  INTEL_LLM_CONCURRENCY. */
+const CONCURRENCY = Math.max(1, Number(process.env.INTEL_LLM_CONCURRENCY) || 2);
+/** Per-call ceiling so a hung/queued request fails fast instead of at ~10 min. */
+const CALL_TIMEOUT_MS = 45_000;
 
 const SYSTEM = [
   "You are a fantasy football analyst.",
@@ -129,8 +133,10 @@ export const newsDigestProvider: IntelProvider = {
       return out;
     }
 
-    const client = new Anthropic();
+    const client = new Anthropic({ timeout: CALL_TIMEOUT_MS, maxRetries: 3 });
     const digestDir = resolve(ctx.cacheDir, "llm-digest");
+    const failures: string[] = [];
+    let calls = 0;
 
     await mapLimit(ctx.players, CONCURRENCY, async (p) => {
       const blurbs = await fetchPlayerNews(ctx, p);
@@ -143,6 +149,7 @@ export const newsDigestProvider: IntelProvider = {
         return;
       }
 
+      calls++;
       try {
         const res = await client.messages.create({
           model: ctx.llmModel,
@@ -159,9 +166,18 @@ export const newsDigestProvider: IntelProvider = {
           out.set(p.id, partial);
         }
       } catch (err) {
-        console.warn(`intel: news-digest failed for ${p.name} — ${(err as Error).message}`);
+        failures.push(`${p.name}: ${(err as Error).message}`);
       }
     });
+
+    if (failures.length) {
+      const sample = failures[0]!.split(": ").slice(1).join(": ");
+      console.warn(
+        `intel: news-digest — ${failures.length}/${calls} calls failed (${sample}). ` +
+          `Successful reads are cached; re-run to fill the rest. If it's rate ` +
+          `limits, lower INTEL_LLM_CONCURRENCY or add credits at console.anthropic.com.`,
+      );
+    }
 
     return out;
   },
