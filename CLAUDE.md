@@ -129,7 +129,8 @@ src/
     live/              PURE live-draft engine: snake.ts (turn math) needs.ts
                        (roster -> PositionNeed) survival.ts (willLast) context.ts
                        (tierCliffs/positionRuns) assistant.ts (computeAdvice ->
-                       DraftAdvice) types.ts
+                       DraftAdvice) record.ts (draft-log builders) calibrate.ts
+                       (calibrateFromLog -> constant suggestions) types.ts
   intel/               chatter/news signal for draft + weekly (spec 2026-09-02)
     types.ts  cache.ts  match.ts (Sleeper identity)  apply.ts (PURE merge +
     adjust)  collect.ts (orchestrator + disk cache)  weekly.ts (roster/lineup
@@ -141,7 +142,8 @@ src/
     show-roster.ts     `npm run roster` (read-only; intel-adjusted)
     set-lineup.ts      `npm run lineup` (intel-adjusted projections)
     cheatsheet.ts      `npm run cheatsheet` (--threshold/--pos/--blend/--no-intel/--llm) — SHIPPED
-    draft.ts           `npm run draft` (ESPN) — live draft assistant (poll + render)
+    draft.ts           `npm run draft` (ESPN) — live draft assistant (poll + render + --record)
+    draft-review.ts    `npm run draft:review -- <log>` — post-draft calibration report
     intel.ts           `npm run intel` — preview the roster's chatter
     waivers.ts         `npm run waivers` (ESPN) — add/drop recommendations
     prompt.ts
@@ -155,6 +157,7 @@ tests/
   ecr.spec.ts  board-vor.spec.ts  waiver-value.spec.ts  waiver-pairs.spec.ts
   espn-draft-state.spec.ts  draft-snake.spec.ts  draft-needs.spec.ts
   draft-survival.spec.ts  draft-context.spec.ts  draft-assistant.spec.ts
+  draft-record.spec.ts  draft-calibrate.spec.ts
                        pure logic, no browser
   fixtures/espn-league.sample.json          hand-built; swap for a real dump
   fixtures/espn-draft-detail.sample.json    hand-built mid-draft mDraftDetail

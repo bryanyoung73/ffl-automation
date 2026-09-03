@@ -1,8 +1,11 @@
+import { appendFileSync, mkdirSync } from "node:fs";
+import { resolve } from "node:path";
 import { loadConfig } from "../config.js";
 import { getProvider, providerLabel } from "../providers/index.js";
 import { assembleBoard } from "../draft/assemble.js";
 import { computeAdvice } from "../draft/live/assistant.js";
 import type { DraftAdvice, Rec } from "../draft/live/types.js";
+import { buildEvent, buildFinal, buildMeta } from "../draft/live/record.js";
 import { hasFlag, intFlag } from "./prompt.js";
 
 /**
@@ -16,6 +19,8 @@ import { hasFlag, intFlag } from "./prompt.js";
  *   --once           print advice once and exit (slow drafts / testing)
  *   --no-ecr         skip FantasyPros ECR;  --no-intel skip chatter;  --llm digest
  *   --refresh        force-refresh the ECR + intel caches
+ *   --record         append a JSONL draft log to output/ (default on; off for
+ *                    --once); --no-record to disable. Feed it to draft:review.
  */
 async function main(): Promise<void> {
   const config = loadConfig();
@@ -31,6 +36,7 @@ async function main(): Promise<void> {
   const top = intFlag("top") ?? 6;
   let slot = intFlag("slot") ?? null;
   const myTeamId = config.espn.teamId;
+  const record = hasFlag("no-record") ? false : hasFlag("record") || !once;
 
   const provider = getProvider(config);
 
@@ -58,6 +64,25 @@ async function main(): Promise<void> {
       slot = null;
     }
 
+    let logPath: string | null = null;
+    let logLines = 0;
+    if (record) {
+      mkdirSync(config.outputDir, { recursive: true });
+      logPath = resolve(
+        config.outputDir,
+        `draft-log-${config.espn.leagueId}-${new Date().toISOString().slice(0, 10)}.jsonl`,
+      );
+      appendLine(logPath, buildMeta({
+        leagueId: config.espn.leagueId,
+        teamId: myTeamId,
+        settings: league,
+        board,
+        slot,
+      }));
+      logLines++;
+      console.log(`recording → ${logPath}`);
+    }
+
     console.log(
       `\nBoard ready — ${board.rows.length} players. ` +
         `${once ? "One-shot." : "Watching the draft; Ctrl+C to stop."}\n`,
@@ -82,10 +107,19 @@ async function main(): Promise<void> {
       }
 
       if (once || state.picks.length !== lastCount) {
+        const prevCount = Math.max(0, lastCount);
         lastCount = state.picks.length;
         const advice = computeAdvice({ board, state, myTeamId, mySlot: slot, settings: league, top });
         render(advice, { clear: !once, intelAsOf });
+        if (logPath) {
+          appendLine(logPath, buildEvent(prevCount, state, board, advice, myTeamId));
+          logLines++;
+        }
         if (state.drafted) {
+          if (logPath) {
+            appendLine(logPath, buildFinal(state, board, myTeamId));
+            logLines++;
+          }
           console.log("\nDraft complete.");
           break;
         }
@@ -94,6 +128,8 @@ async function main(): Promise<void> {
       if (once) break;
       await sleep(intervalMs, (w) => (wake = w));
     }
+
+    if (logPath) console.log(`\nrecorded ${logLines} lines → ${logPath}`);
   } finally {
     process.off("SIGINT", onSigint);
     await provider.close();
@@ -152,13 +188,17 @@ function printRec(rec: Rec, n: number): void {
 /* ------------------------------------------------------------------ utils --- */
 
 function sleep(ms: number, register: (wake: () => void) => void): Promise<void> {
-  return new Promise((resolve) => {
-    const t = setTimeout(resolve, ms);
+  return new Promise((res) => {
+    const t = setTimeout(res, ms);
     register(() => {
       clearTimeout(t);
-      resolve();
+      res();
     });
   });
+}
+
+function appendLine(path: string, obj: unknown): void {
+  appendFileSync(path, `${JSON.stringify(obj)}\n`, "utf8");
 }
 
 main().catch((err) => {

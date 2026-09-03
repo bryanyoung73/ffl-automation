@@ -14,6 +14,16 @@ const SIGMA_CEIL = 18;
 const GONE_BELOW = 0.15;
 const SAFE_ABOVE = 0.6;
 
+/** The tuning constants in force — recorded in the draft log's meta line so a
+ *  log is self-describing and the calibrator can diff against it. */
+export const SURVIVAL_CONSTANTS = Object.freeze({
+  sigmaFraction: SIGMA_FRACTION,
+  sigmaFloor: SIGMA_FLOOR,
+  sigmaCeil: SIGMA_CEIL,
+  goneBelow: GONE_BELOW,
+  safeAbove: SAFE_ABOVE,
+});
+
 export type SurvivalBucket = "gone" | "coinflip" | "safe";
 
 export interface Survival {
@@ -45,8 +55,9 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-/** Standard normal CDF via an erf approximation (Abramowitz & Stegun 7.1.26). */
-function normCdf(z: number): number {
+/** Standard normal CDF via an erf approximation (Abramowitz & Stegun 7.1.26).
+ *  Exported for the calibrator's what-if pass. */
+export function normCdf(z: number): number {
   return 0.5 * (1 + erf(z / Math.SQRT2));
 }
 

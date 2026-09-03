@@ -15,6 +15,15 @@ const RUN_BUMP = 3;
 const CLIFF_BUMP = 6;
 const DEFAULT_NEED_WEIGHT = 0.3;
 
+/** The scoring constants in force — recorded in the draft log's meta line. */
+export const SCORE_CONSTANTS = Object.freeze({
+  defaultTop: DEFAULT_TOP,
+  survivalBonus: { ...SURVIVAL_BONUS },
+  runBump: RUN_BUMP,
+  cliffBump: CLIFF_BUMP,
+  defaultNeedWeight: DEFAULT_NEED_WEIGHT,
+});
+
 export interface AdviceInput {
   board: Board;
   state: DraftState;

@@ -90,6 +90,17 @@ const RUN_MIN_WINDOW = 6;
 /** Absolute floor on the count, on top of the "half the window" rule. */
 const RUN_MIN_COUNT = 4;
 
+/** The tuning constants in force — recorded in the draft log's meta line. */
+export const CLIFF_CONSTANTS = Object.freeze({
+  positions: [...CLIFF_POSITIONS],
+  remainingMax: CLIFF_REMAINING_MAX,
+  vorTierGap: VOR_TIER_GAP,
+  minVorDrop: CLIFF_MIN_VOR_DROP,
+  minAdpDrop: CLIFF_MIN_ADP_DROP,
+  runMinWindow: RUN_MIN_WINDOW,
+  runMinCount: RUN_MIN_COUNT,
+});
+
 /**
  * Positions that dominated the last `window` picks. `window` defaults to a
  * rough round; the CLI passes `settings.teams`.

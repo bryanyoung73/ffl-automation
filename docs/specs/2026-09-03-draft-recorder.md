@@ -1,7 +1,7 @@
 # Draft recorder + post-draft calibration
 
 Date: 2026-09-03
-Status: spec — not started. Intended as phase 6 of the live draft assistant.
+Status: shipped (2026-09-03) — see addendum. Live draft assistant phase 6.
 
 ## Problem
 
@@ -248,12 +248,45 @@ package.json     + "draft:review": "tsx src/cli/draft-review.ts"
   the shown list → top-1 miss, top-3 hit.
 - All pure — no network.
 
+## Addendum — shipped (2026-09-03)
+
+Both phases in one pass.
+
+- `src/draft/live/record.ts` (pure) — `DraftLog{Meta,Event,Final}` types +
+  `buildMeta` / `buildEvent(prevPickCount, …)` / `buildFinal` / `totalRounds`.
+  `SURVIVAL_CONSTANTS` (survival.ts), `CLIFF_CONSTANTS` (context.ts),
+  `SCORE_CONSTANTS` (assistant.ts) exported and stamped into the meta line.
+  `normCdf` exported from survival.ts.
+- `src/draft/live/calibrate.ts` (pure) — `calibrateFromLog(meta, events,
+  final) → CalibrationReport` + `renderCalibration`. Five analyses: ADP-banded
+  `sigma` table + a least-squares MAD fit scaled by `√(π/2)` into suggested
+  `fraction`/`floor`/`ceil`; bucket **reliability** (predictions deduped per
+  `(player, my-next-pick)`, decile table, Brier, and the gone/coinflip/safe
+  "actually lasted" check); **tier-gap** percentiles of the real positive VOR
+  drops between consecutively drafted players; **hit rate** of my actual picks
+  vs the shown top-6; a `closeCallsAtTop` count.
+- `src/cli/draft.ts` — `--record` (default on; off under `--once` unless
+  `--record` given; `--no-record` disables). Writes
+  `output/draft-log-<leagueId>-<date>.jsonl`: meta after board assembly, one
+  event per pick-count change, a final line on completion.
+- `src/cli/draft-review.ts` → `npm run draft:review -- <log> [--csv]`.
+- `tests/draft-record.spec.ts` (6) + `tests/draft-calibrate.spec.ts` (8);
+  built the synthetic logs programmatically instead of a fixture file (cleaner
+  for parameterised noise). Typecheck clean, 159 unit tests pass.
+
+Smoke-tested end to end against the live (undrafted) ESPN league: `draft --once
+--record` writes a valid 2-line log (meta captures the IDP league's 16 rounds +
+LB/DL/DB starters), and `draft:review` parses it and renders the full report
+(all sections present, empty where the 0-pick draft gives no data).
+
+**Deviations from the spec:** in-test synthetic logs rather than
+`tests/fixtures/draft-log.sample.jsonl`; bump-sanity is the light
+`closeCallsAtTop` count, not a full re-score.
+
 ## Open items
 
-- **`--record` default-on vs opt-in.** Append-only JSONL, a few KB for a whole
-  draft, and you get one shot at a real draft a year — leaning toward
-  default-on with a `--no-record` escape hatch. Spec currently says opt-in;
-  decide at implementation.
+- **`--record` default-on vs opt-in.** Shipped default-on (off under `--once`).
+  `--no-record` disables.
 - **Live self-adjust deferred, and probably not worth it.** In a 10-team draft,
   30 picks is round 3 — an empirically-fit sigma wouldn't have the data to
   matter until the draft is half over, by which point the early-round picks
@@ -267,9 +300,8 @@ package.json     + "draft:review": "tsx src/cli/draft-review.ts"
 - **Cross-season pooling / retention.** `output/` is gitignored wholesale;
   decide whether kept logs move somewhere tracked. Defer until there's a second
   one.
-- **`normCdf` export** from `survival.ts` for the reliability check vs
-  re-implementing in `calibrate.ts` — just export it.
-- **Trimming the advice snapshot.** Full `DraftAdvice` per event is fine size-
-  wise (~1–2 KB); the spec trims it anyway for a cleaner log. Confirm the
-  trimmed shape carries everything the analyzer needs before phase 1 ships (it
-  drives phase 2).
+- **`normCdf` export** — done; not yet used by `calibrate.ts` (kept for a
+  future what-if pass that re-scores buckets under a suggested sigma).
+- **Trimming the advice snapshot** — done (`AdviceSnapshot`); confirmed it
+  carries everything the analyzer needs (`myNextOverall`, `overall`, `slot`,
+  per-rec `playerId`/`adp`/`survivalProb`/`survivalBucket`/`score`, cliffs).
