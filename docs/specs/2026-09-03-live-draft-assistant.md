@@ -326,6 +326,32 @@ league (1144783883) with the existing `ESPN_S2` / `ESPN_SWID` cookies —
 is still undrafted (`drafted: false, picks: 0`), so pick-by-pick flow can't be
 watched until it drafts, but the endpoint and mapper are proven.
 
+## Addendum — Phase 2 shipped (2026-09-03)
+
+Built:
+
+- `src/draft/live/snake.ts` (pure) — `mySlots(slot, teams, rounds)`,
+  `picksUntilNext(completed, mine)` (0 = on the clock), `picksUntilAfter`,
+  `nextPick`. `mySlots` throws on an out-of-range slot.
+- `src/draft/live/needs.ts` (pure) — `myRoster(state, myTeamId, board)`
+  (resolves my picks against the board for positions; drops other teams and
+  off-board keepers) and `rosterNeeds(mine, settings) → PositionNeed[]`. Weight
+  curve: `1 + startersLeft + flexShare` while a slot is open, a per-position
+  `DEPTH_FLOOR` once set (RB 0.55 … K/DEF 0.1); K/DEF capped at 0.9 so they
+  never climb into the early rounds; FLEX share is split across RB/WR/TE
+  proportional to their dedicated slots and is consumed as bench bodies pile up.
+- `src/draft/live/types.ts` — `PositionNeed` (engine output types land in
+  phase 4).
+- `src/draft/assemble.ts` — `assembleBoard(config, provider, opts)` lifts the
+  board pipeline (getDraftBoard → fetchEcr/attachEcr → collectIntel →
+  buildBoard) out of `cheatsheet.ts`; returns `{ league, entries, intel,
+  intelAsOf, board }`. Progress goes to an injected `log` (silent by default).
+  `cheatsheet.ts` is now a thin caller — output verified byte-compatible
+  against a live `--pos QB` run.
+
+`tests/draft-snake.spec.ts` (6) + `tests/draft-needs.spec.ts` (5), wired into
+`test:unit`. Typecheck clean, 121 unit tests pass.
+
 ## Open items / risks
 
 - ~~**Live auth is unverified.**~~ Resolved in Phase 1 — `mDraftDetail` returns
