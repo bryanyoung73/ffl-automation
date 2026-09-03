@@ -1,9 +1,9 @@
-import type { Position } from "../types.js";
+import type { PlayerRef, Position } from "../types.js";
+import type { Survival } from "./survival.js";
 
 /**
- * Shared shapes for the live draft assistant (`npm run draft`). The engine's
- * output types (`DraftAdvice`, `Rec`, …) land here in a later phase; for now
- * this is the roster-need read and the board-context signals.
+ * Shared shapes for the live draft assistant (`npm run draft`): the roster-need
+ * read, the board-context signals, and the engine's `DraftAdvice` output.
  */
 
 /**
@@ -46,4 +46,49 @@ export interface Run {
   position: Position;
   count: number;
   window: number;
+}
+
+/** One ranked pick suggestion. */
+export interface Rec {
+  player: PlayerRef;
+  adp: number | null;
+  vor: number | null;
+  vorRank: number | null;
+  ecrPosRank: string | null;
+  /** The position's need weight that scaled this player's value. */
+  needWeight: number;
+  /** Odds he lasts to my next pick. */
+  survival: Survival;
+  /** The ranking number: need-weighted value + survival/cliff/run bumps. */
+  score: number;
+  /** 1–3 short clauses, most important first. */
+  reasons: string[];
+}
+
+/** My roster so far, one entry per position (players may be empty). */
+export interface RosterSlotView {
+  position: Position;
+  players: string[];
+}
+
+/** Everything the `npm run draft` renderer needs for one recompute. */
+export interface DraftAdvice {
+  /** The pick currently on the clock is mine. */
+  onClock: boolean;
+  /** Overall number of the pick on the clock (or the last pick, once done). */
+  overall: number;
+  /** "round.pickInRound" label for `overall`, e.g. "3.07". */
+  label: string;
+  /** Overall number of my next pick, null when unknown or none left. */
+  myNextOverall: number | null;
+  /** Picks between now and my next one (0 = on the clock), null when unknown. */
+  picksUntilNext: number | null;
+  /** Fraction of the draft complete, 0–1. */
+  pctComplete: number;
+  /** Draft slot in use: detected from round 1, else the passed value, else null. */
+  slot: number | null;
+  myRoster: RosterSlotView[];
+  recommendations: Rec[];
+  cliffs: Cliff[];
+  runs: Run[];
 }

@@ -1,5 +1,4 @@
-import { POSITIONS, type LeagueSettings, type Position } from "../types.js";
-import type { BoardEntry } from "../board.js";
+import { POSITIONS, type LeagueSettings, type PlayerRef, type Position } from "../types.js";
 import type { DraftState } from "../../providers/types.js";
 import type { PositionNeed } from "./types.js";
 
@@ -26,13 +25,13 @@ const LATE_ONLY_CAP = 0.9;
  * My drafted players, resolved against the board so each carries a position.
  * Picks not on the board — a keeper deeper than the top ~300 — are dropped.
  */
-export function myRoster(
+export function myRoster<T extends { player: PlayerRef }>(
   state: DraftState,
   myTeamId: number,
-  board: readonly BoardEntry[],
-): BoardEntry[] {
+  board: readonly T[],
+): T[] {
   const byId = new Map(board.map((e) => [e.player.id, e]));
-  const out: BoardEntry[] = [];
+  const out: T[] = [];
   for (const pick of state.picks) {
     if (pick.teamId !== myTeamId) continue;
     const entry = byId.get(pick.playerId);
@@ -48,7 +47,7 @@ export function myRoster(
  * early rounds. Returned in `POSITIONS` order.
  */
 export function rosterNeeds(
-  mine: readonly BoardEntry[],
+  mine: readonly { player: PlayerRef }[],
   settings: LeagueSettings,
 ): PositionNeed[] {
   const count = new Map<Position, number>(POSITIONS.map((p) => [p, 0]));

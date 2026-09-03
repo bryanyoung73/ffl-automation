@@ -377,6 +377,41 @@ Built:
 `tests/draft-survival.spec.ts` (6) + `tests/draft-context.spec.ts` (9), wired
 into `test:unit`. Typecheck clean, 136 unit tests pass.
 
+## Addendum — Phase 4 shipped (2026-09-03)
+
+Built `src/draft/live/assistant.ts` — `computeAdvice({ board, state, myTeamId,
+mySlot, settings, top? }) → DraftAdvice` (pure):
+
+- **Slot** — a round-1 pick by my team is authoritative for `mySlot`; until
+  then the passed value; neither → `null` (turn math skipped, recs still rank).
+- **Score** — `baseValue(row) * need.weight` where `baseValue` is VOR, else a
+  gentle curve off ECR rank, else off board rank; plus additive bumps: survival
+  (`gone` +8 / `coinflip` +4), a position run (+3), an in-cliff player (+6).
+  Constants small on purpose — they only reorder once the field compresses,
+  which is late, which is when they should.
+- **Reasons** — up to 3 clauses, priority order: slot filled ("fills your 2nd
+  RB slot") → survival ("won't last to 25") → cliff ("2 left in the RB tier
+  before a 36-pt drop") → run → value ("WR14 · VOR +53") → top intel note.
+- `DraftAdvice` carries `onClock`, `overall`, `label` ("3.03"), `myNextOverall`,
+  `picksUntilNext`, `pctComplete`, `slot`, `myRoster` (one row per position),
+  `recommendations: Rec[]`, `cliffs`, `runs`. A finished/complete draft returns
+  empty rec/cliff/run lists.
+- `myRoster` / `rosterNeeds` / `positionRuns` signatures loosened to
+  `{ player: PlayerRef }[]` so the engine can pass `board.rows` directly.
+- Engine output types (`Rec`, `RosterSlotView`, `DraftAdvice`) added to
+  `live/types.ts`.
+
+`tests/draft-assistant.spec.ts` (9) — end-to-end from a synthetic board + picks:
+label/turn math, slot auto-detect overriding the passed value, drafted players
+gone from recs, "fills your Nth slot" wording, survival flag + bump, cliff
+reason, the null-slot graceful path, finished-draft empties, `top`. Typecheck
+clean, 145 unit tests pass.
+
+Also smoke-tested against the **live ESPN board** (real VOR/ECR/ADP) with a
+synthesised mid-round-3 snake state: correctly read a 2-RB roster, returned six
+WRs ("fills your 1st WR slot"), flagged a coin-flip on a player whose ADP sat
+on my next pick, and detected an RB run (5 of the last 10).
+
 ## Open items / risks
 
 - ~~**Live auth is unverified.**~~ Resolved in Phase 1 — `mDraftDetail` returns

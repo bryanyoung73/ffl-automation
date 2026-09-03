@@ -1,5 +1,5 @@
-import type { LeagueSettings, Position } from "../types.js";
-import type { BoardEntry, BoardRow } from "../board.js";
+import type { LeagueSettings, PlayerRef, Position } from "../types.js";
+import type { BoardRow } from "../board.js";
 import type { DraftState } from "../../providers/types.js";
 import type { Cliff, Run } from "./types.js";
 
@@ -99,7 +99,7 @@ const RUN_MIN_COUNT = 4;
  */
 export function positionRuns(
   state: DraftState,
-  board: readonly BoardEntry[],
+  board: readonly { player: PlayerRef }[],
   window = 12,
 ): Run[] {
   const posById = new Map(board.map((e) => [e.player.id, e.player.position]));
