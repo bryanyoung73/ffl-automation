@@ -29,6 +29,12 @@ export interface DraftState {
   inProgress: boolean;
   /** Every pick made so far, in draft order. Grows as the draft proceeds. */
   picks: DraftPick[];
+  /** My 1-based draft slot, when the provider knows it up front (Sleeper).
+   *  Undefined for providers that only reveal it via the round-1 pick (ESPN). */
+  mySlot?: number | null;
+  /** My league team id, when the provider can identify it (Sleeper roster id).
+   *  Undefined otherwise — the CLI falls back to config. */
+  myTeamId?: number | null;
 }
 
 /**

@@ -1,11 +1,14 @@
 # ffl-automation
 
-Fantasy football automation with two back ends, chosen by `PROVIDER` in `.env`:
+Fantasy football automation with three back ends, chosen by `PROVIDER` in `.env`:
 
 - **`PROVIDER=yahoo`** (default) — drives a real browser (Playwright) against
   Yahoo. Needs a one-time manual login (below).
 - **`PROVIDER=espn`** — ESPN's Fantasy v3 JSON API over `fetch`. No browser;
   private leagues just need two cookies in `.env`.
+- **`PROVIDER=sleeper`** — Sleeper's public read API. **No auth at all.** Draft
+  features only for now (`npm run draft`); roster/waivers land later. It's the
+  only back end whose API carries live draft picks.
 
 Commands:
 
@@ -114,7 +117,7 @@ Chrome dance.
 
 | Var | Default | Notes |
 | --- | --- | --- |
-| `PROVIDER` | `yahoo` | `yahoo` or `espn` — data source for every command. |
+| `PROVIDER` | `yahoo` | `yahoo`, `espn` or `sleeper` — data source for every command. |
 | `YAHOO_LEAGUE_ID` | `891808` | From your team URL. Required when `PROVIDER=yahoo`. |
 | `YAHOO_TEAM_ID` | `14` | The `mid=` in your team URL. |
 | `YAHOO_BASE_URL` | `https://football.fantasysports.yahoo.com` | |
@@ -126,6 +129,9 @@ Chrome dance.
 | `ESPN_SEASON` | _(current year)_ | e.g. `2026`. |
 | `ESPN_S2` / `ESPN_SWID` | — | Cookies for a private league (see above). |
 | `ESPN_WEEK` | _(current)_ | Pin a week; falls back to `YAHOO_WEEK` then ESPN's current period. |
+| `SLEEPER_LEAGUE_ID` | — | From `sleeper.com/leagues/<id>`. Required when `PROVIDER=sleeper`. |
+| `SLEEPER_USERNAME` | — | Your Sleeper handle (resolved to a user id). Or set `SLEEPER_USER_ID`. |
+| `SLEEPER_SEASON` | _(current year)_ | e.g. `2026`. |
 | `INTEL_LLM` | _(off)_ | `1` to default the Claude news digest on (same as passing `--llm`). |
 | `INTEL_LLM_MODEL` | `claude-opus-5` | Model for the digest. `claude-haiku-4-5` is ~15x cheaper. |
 | `ANTHROPIC_API_KEY` | — | Required only when the LLM digest is used. Sleeper + ESPN news need no key. |

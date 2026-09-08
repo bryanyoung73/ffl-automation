@@ -1,7 +1,8 @@
 # Sleeper provider — a third back end with a real live draft feed
 
 Date: 2026-09-08
-Status: spec — not started
+Status: phase 1 shipped (2026-09-08) — see addendum. Live verification pending a
+real Sleeper league id / mock draft.
 
 ## Problem
 
@@ -229,6 +230,46 @@ tests/
   `npm run draft --record`, watch picks land, then `npm run draft:review`.
 - Sleeper's rate limit is ~1000 req/min; polling every 3–5 s is ~15/min — no
   concern.
+
+## Addendum — Phase 1 shipped (2026-09-08)
+
+Built:
+
+- `src/config.ts` — `PROVIDER=sleeper`, `SleeperConfig` (`leagueId`,
+  `userId`/`username`, `season`, `baseUrl`). No secrets.
+- `src/providers/sleeper/client.ts` — `SleeperClient`: fetch wrapper, per-process
+  GET memo, `noCache` for the picks poll, friendly 404.
+- `src/providers/sleeper/maps.ts` (pure) — `detectScoring` (`scoring_settings.rec`),
+  `mapSettings` (roster_positions → starters incl. `FLEX`→`W/R/T`,
+  `SUPER_FLEX`→`OP`; BN→benchSize; IR/TAXI skipped), `mapDraftState`
+  (status → drafted/inProgress; picks sorted; **`mySlot`** from
+  `draft_order[userId]`, **`myTeamId`** from `slot_to_roster_id`),
+  `playerUniverse` (dump → BoardEntry, offense+DEF, DEF id'd by team code).
+- `src/providers/sleeper/SleeperLeague.ts` — `getLeagueSettings` /
+  `getDraftState` / `getDraftBoard`; the other three throw NOT_SUPPORTED.
+- `src/draft/adp.ts` (pure `parseAdp` / `attachAdp`, impure `fetchAdp`) —
+  FantasyFootballCalculator `/api/v1/adp` JSON, 8h cache. `BoardEntry` /
+  `BoardRow` gained `adpHigh` / `adpLow` / `adpStdev`; `buildBoard` carries them.
+- `src/draft/live/survival.ts` — `willLast(adp, next, sigmaOverride?)`; a real
+  `adpStdev` (clamped 1–25) beats the `clamp(adp·0.15, 4, 18)` heuristic.
+  `computeAdvice` + `computeVona` pass `row.adpStdev`.
+- `src/providers/{types,index}.ts` — `DraftState.mySlot` / `myTeamId`;
+  `"sleeper"` case + label.
+- `src/cli/draft.ts` — allows `PROVIDER=sleeper`; prefers `state.mySlot` /
+  `state.myTeamId` (so `npm run draft` needs no `--slot` on Sleeper);
+  provider-agnostic log filename.
+- `tests/sleeper-maps.spec.ts` (5) + `tests/adp.spec.ts` (3). Typecheck clean,
+  173 unit tests pass.
+
+**Verified against real data** (no league id needed): the Sleeper `/players/nfl`
+dump (12,226) → `playerUniverse` (878 offense+DEF) → FFC ADP (255) →
+`attachAdp` matched **254**, board correctly ADP-ordered with real
+`high`/`low`/`stdev` and byes. Gibbs σ0.6 vs James Cook σ2.8 — the per-player
+survival sigma the model wanted.
+
+**Not verified** — `getLeagueSettings` / `getDraftState` need a real
+`SLEEPER_LEAGUE_ID` (the mappers are unit-tested against realistic fixtures).
+Point `.env` at a Sleeper mock draft to shake out the live path.
 
 ## Open items / risks
 

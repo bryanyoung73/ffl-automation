@@ -41,7 +41,7 @@ export function computeVona(
     .sort((a, b) => (b.vor as number) - (a.vor as number));
 
   for (const r of pool) {
-    const prob = willLast(r.adp, myNextOverall).prob;
+    const prob = willLast(r.adp, myNextOverall, r.adpStdev).prob;
     // null prob = no ADP, can't reason — treat as gettable, like survival.ts does
     if (prob == null || prob >= SURVIVE_MIN) {
       return {

@@ -24,9 +24,9 @@ import { hasFlag, intFlag } from "./prompt.js";
  */
 async function main(): Promise<void> {
   const config = loadConfig();
-  if (config.provider !== "espn" || !config.espn) {
+  if (config.provider === "yahoo") {
     console.error(
-      "`npm run draft` is ESPN-only — Yahoo drafts run off-platform. Set PROVIDER=espn in .env.",
+      "`npm run draft` needs PROVIDER=espn or PROVIDER=sleeper — Yahoo drafts run off-platform.",
     );
     process.exit(1);
   }
@@ -35,7 +35,9 @@ async function main(): Promise<void> {
   const intervalMs = Math.max(2, intFlag("interval") ?? 5) * 1000;
   const top = intFlag("top") ?? 6;
   let slot = intFlag("slot") ?? null;
-  const myTeamId = config.espn.teamId;
+  const slotFromFlag = slot != null;
+  let myTeamId = config.espn?.teamId ?? 0;
+  const leagueId = config.espn?.leagueId ?? config.sleeper?.leagueId ?? "league";
   const record = hasFlag("no-record") ? false : hasFlag("record") || !once;
 
   const provider = getProvider(config);
@@ -70,10 +72,10 @@ async function main(): Promise<void> {
       mkdirSync(config.outputDir, { recursive: true });
       logPath = resolve(
         config.outputDir,
-        `draft-log-${config.espn.leagueId}-${new Date().toISOString().slice(0, 10)}.jsonl`,
+        `draft-log-${leagueId}-${new Date().toISOString().slice(0, 10)}.jsonl`,
       );
       appendLine(logPath, buildMeta({
-        leagueId: config.espn.leagueId,
+        leagueId,
         teamId: myTeamId,
         settings: league,
         board,
@@ -96,6 +98,9 @@ async function main(): Promise<void> {
       try {
         state = await provider.getDraftState();
         backoffMs = intervalMs;
+        // Sleeper knows my slot / team id up front — prefer it over --slot/config.
+        if (!slotFromFlag && state.mySlot != null) slot = state.mySlot;
+        if (state.myTeamId != null) myTeamId = state.myTeamId;
       } catch (err) {
         const secs = Math.round(backoffMs / 1000);
         console.error(

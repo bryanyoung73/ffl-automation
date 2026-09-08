@@ -27,9 +27,10 @@ Stack: `@playwright/test`, `tsx` for CLIs, ESM, strict TS. No framework.
 
 ## Providers
 
-`PROVIDER` in `.env` (`yahoo` default | `espn`) picks the data source for every
-command. Both implement `LeagueProvider` (`src/providers/types.ts`) and return
-the same provider-agnostic shapes, so `draft/` and `lineup/` never branch on it.
+`PROVIDER` in `.env` (`yahoo` default | `espn` | `sleeper`) picks the data
+source for every command. All implement `LeagueProvider`
+(`src/providers/types.ts`) and return the same provider-agnostic shapes, so
+`draft/` and `lineup/` never branch on it.
 
 - **yahoo** (`src/providers/yahoo/YahooLeague.ts`) — the original path: wraps
   `browser.ts` + `pages/*`, no behaviour change. Needs the Chrome login (below).
@@ -39,6 +40,18 @@ the same provider-agnostic shapes, so `draft/` and `lineup/` never branch on it.
   pure, unit-tested `maps.ts` + the exported mappers in `EspnLeague.ts`; the
   write path (`applyLineup` → `POST transactions/`) is unofficial, so
   `--dry-run` first. See `docs/specs/2026-08-31-espn-api-provider.md`.
+  Note (2026-09-07): `mDraftDetail` does **not** carry live picks during a
+  clock-running draft — it stays a skeleton until the draft completes. So the
+  live draft assistant only works on ESPN *after the fact*. Sleeper is the fix.
+- **sleeper** (`src/providers/sleeper/`) — Sleeper's public read API, **no auth**
+  (no token, no cookies). Phase 1 = draft only: `getLeagueSettings`,
+  `getDraftState` (live picks + my slot, which Sleeper assigns up front), and an
+  ADP-ordered `getDraftBoard` (player pool from the `/players/nfl` dump +
+  `src/draft/adp.ts` FantasyFootballCalculator ADP, which also brings
+  `high`/`low`/`stdev`). `getRoster` / `getFreeAgents` / `applyLineup` throw
+  `NOT_SUPPORTED` (phases 3–4). Pure mappers in `maps.ts`. Config:
+  `SLEEPER_LEAGUE_ID` + `SLEEPER_USERNAME` (both public). See
+  `docs/specs/2026-09-08-sleeper-provider.md`.
 
 ## Current status (2026-09-02)
 
@@ -108,6 +121,9 @@ src/
     espn/client.ts          fetch wrapper: cookies, x-fantasy-filter, errors
     espn/maps.ts            PURE: id<->code maps, scoring + projection helpers
     espn/EspnLeague.ts      provider impl + exported pure mappers
+    sleeper/client.ts       fetch wrapper: no auth, GET memo, noCache
+    sleeper/maps.ts         PURE: slot map, scoring, settings/draft/pick mappers
+    sleeper/SleeperLeague.ts provider impl (draft only in v1)
   browser.ts           browser context from saved storageState (Yahoo only)
   pages/
     TeamPage.ts             login-state checks, output/ debug dumps
@@ -123,6 +139,8 @@ src/
     report.ts          renderBoard() [shipped] + override renderers [v2, unused]
     assemble.ts        assembleBoard() — shared getDraftBoard->ECR->intel->buildBoard
                        pipeline (cheatsheet + draft)
+    ecr.ts             PURE FantasyPros ECR scrape + attach (rank + ceiling/floor)
+    adp.ts             PURE FantasyFootballCalculator ADP (adp + high/low/stdev)
     types.ts
     vor.ts  diff.ts     PURE, unit-tested, v2 — NOT wired
     signals/            SignalProvider interface + FantasyPros stub — v2
@@ -155,9 +173,10 @@ tests/
   intel-match.spec.ts  intel-apply.spec.ts  intel-espn-news.spec.ts
   intel-news-digest.spec.ts  intel-vegas.spec.ts  intel-sleeper-role.spec.ts
   ecr.spec.ts  board-vor.spec.ts  waiver-value.spec.ts  waiver-pairs.spec.ts
-  espn-draft-state.spec.ts  draft-snake.spec.ts  draft-needs.spec.ts
+  espn-draft-state.spec.ts  sleeper-maps.spec.ts  adp.spec.ts
+  draft-snake.spec.ts  draft-needs.spec.ts
   draft-survival.spec.ts  draft-context.spec.ts  draft-assistant.spec.ts
-  draft-record.spec.ts  draft-calibrate.spec.ts
+  draft-record.spec.ts  draft-calibrate.spec.ts  draft-vona.spec.ts
                        pure logic, no browser
   fixtures/espn-league.sample.json          hand-built; swap for a real dump
   fixtures/espn-draft-detail.sample.json    hand-built mid-draft mDraftDetail

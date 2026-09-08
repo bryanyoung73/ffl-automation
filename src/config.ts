@@ -37,7 +37,7 @@ function optionalInt(name: string): number | undefined {
   return n;
 }
 
-export type Provider = "yahoo" | "espn";
+export type Provider = "yahoo" | "espn" | "sleeper";
 
 export interface EspnConfig {
   leagueId: string;
@@ -49,6 +49,15 @@ export interface EspnConfig {
   swid: string;
   readBaseUrl: string;
   writeBaseUrl: string;
+}
+
+export interface SleeperConfig {
+  leagueId: string;
+  /** Explicit SLEEPER_USER_ID, or null to resolve lazily from `username`. */
+  userId: string | null;
+  username: string | null;
+  season: number;
+  baseUrl: string;
 }
 
 export interface Config {
@@ -78,14 +87,30 @@ export interface Config {
   intelLlmModel: string;
   /** Present only when provider === "espn". */
   espn?: EspnConfig;
+  /** Present only when provider === "sleeper". */
+  sleeper?: SleeperConfig;
 }
 
 function readProvider(): Provider {
   const raw = (process.env.PROVIDER?.trim() || "yahoo").toLowerCase();
-  if (raw !== "yahoo" && raw !== "espn") {
-    throw new Error(`PROVIDER must be "yahoo" or "espn", got "${raw}".`);
+  if (raw !== "yahoo" && raw !== "espn" && raw !== "sleeper") {
+    throw new Error(`PROVIDER must be "yahoo", "espn" or "sleeper", got "${raw}".`);
   }
   return raw;
+}
+
+function loadSleeperConfig(): SleeperConfig {
+  const leagueId = required("SLEEPER_LEAGUE_ID");
+  const userId = process.env.SLEEPER_USER_ID?.trim() || null;
+  const username = process.env.SLEEPER_USERNAME?.trim() || null;
+  const season = optionalInt("SLEEPER_SEASON") ?? new Date().getFullYear();
+  return {
+    leagueId,
+    userId,
+    username,
+    season,
+    baseUrl: "https://api.sleeper.app/v1",
+  };
 }
 
 /** SWID must carry its braces in the Cookie header; add them if the user pasted it bare. */
@@ -159,5 +184,6 @@ export function loadConfig(): Config {
     preRankUrl: `${baseUrl}/f1/${leagueId}/${teamId}/editprerank`,
     overrideThreshold,
     espn: provider === "espn" ? loadEspnConfig() : undefined,
+    sleeper: provider === "sleeper" ? loadSleeperConfig() : undefined,
   };
 }

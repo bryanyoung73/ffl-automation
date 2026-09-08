@@ -100,7 +100,9 @@ export function computeAdvice(input: AdviceInput): DraftAdvice {
     const pos = row.player.position;
     const need = needByPos.get(pos) ?? fallbackNeed(pos);
     const surv: Survival =
-      myNextOverall != null ? willLast(row.adp, myNextOverall) : { prob: null, bucket: "safe" };
+      myNextOverall != null
+        ? willLast(row.adp, myNextOverall, row.adpStdev)
+        : { prob: null, bucket: "safe" };
 
     const tierCliff = cliffByPos.get(pos);
     const inCliff = tierCliff?.players.includes(row.player.name) ?? false;

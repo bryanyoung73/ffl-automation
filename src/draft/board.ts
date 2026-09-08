@@ -29,6 +29,12 @@ export interface BoardEntry {
   ecrRankMin?: number | null;
   ecrRankMax?: number | null;
   ecrRankStd?: number | null;
+  /** Best / worst actual draft slot and draft-slot std dev, from ADP data
+   *  (FantasyFootballCalculator). `adpStdev` is the real per-player survival
+   *  sigma; `adpHigh`/`adpLow` are a draft-position ceiling/floor. */
+  adpHigh?: number | null;
+  adpLow?: number | null;
+  adpStdev?: number | null;
   /** Season projected fantasy points — feeds VOR when `leagueSettings` is passed. */
   projectedPoints?: number | null;
 }
@@ -60,6 +66,10 @@ export interface BoardRow {
   ecrRankMin: number | null;
   ecrRankMax: number | null;
   ecrRankStd: number | null;
+  /** Draft-slot ceiling / floor / std dev, from ADP data. */
+  adpHigh: number | null;
+  adpLow: number | null;
+  adpStdev: number | null;
   /** Snake round bucket: ceil(rank / teams). */
   tier: number;
   note: "" | "yahoo-hot" | "yahoo-cold";
@@ -238,6 +248,9 @@ export function buildBoard(entries: readonly BoardEntry[], options: BuildBoardOp
       ecrRankMin: e.ecrRankMin ?? null,
       ecrRankMax: e.ecrRankMax ?? null,
       ecrRankStd: e.ecrRankStd ?? null,
+      adpHigh: e.adpHigh ?? null,
+      adpLow: e.adpLow ?? null,
+      adpStdev: e.adpStdev ?? null,
       tier: Math.ceil(rank / teams),
       note,
       adpRank,

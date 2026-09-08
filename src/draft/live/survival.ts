@@ -35,12 +35,21 @@ export interface Survival {
 /**
  * @param adp              average draft position (overall-pick scale), or null
  * @param nextPickOverall  the overall number of my next pick
+ * @param sigmaOverride    a measured draft-slot std dev (ADP data) to use in
+ *                         place of the `clamp(adp·0.15, …)` heuristic
  */
-export function willLast(adp: number | null, nextPickOverall: number): Survival {
+export function willLast(
+  adp: number | null,
+  nextPickOverall: number,
+  sigmaOverride?: number | null,
+): Survival {
   if (adp == null || !Number.isFinite(nextPickOverall)) {
     return { prob: null, bucket: "safe" };
   }
-  const sigma = clamp(adp * SIGMA_FRACTION, SIGMA_FLOOR, SIGMA_CEIL);
+  const sigma =
+    sigmaOverride != null && sigmaOverride > 0
+      ? clamp(sigmaOverride, 1, 25)
+      : clamp(adp * SIGMA_FRACTION, SIGMA_FLOOR, SIGMA_CEIL);
   const prob = clamp(1 - normCdf((nextPickOverall - adp) / sigma), 0, 1);
   const bucket: SurvivalBucket =
     prob < GONE_BELOW ? "gone" : prob < SAFE_ABOVE ? "coinflip" : "safe";
