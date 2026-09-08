@@ -1,6 +1,8 @@
 import type { LeagueSettings, Position, SlotCode } from "../../draft/types.js";
 import { POSITIONS } from "../../draft/types.js";
 import type { BoardEntry } from "../../draft/board.js";
+import type { Player, PlayerStatus } from "../../lineup/types.js";
+import type { FreeAgent } from "../../waivers/types.js";
 import type { DraftPick, DraftState } from "../types.js";
 import { teamCode } from "../../nfl/names.js";
 import type { SleeperPlayer } from "../../intel/match.js";
@@ -243,4 +245,136 @@ export function playerUniverse(dump: readonly SleeperPlayer[]): BoardEntry[] {
     });
   }
   return out;
+}
+
+/* ------------------------------------------------------------------ *
+ * Roster + free agents (phase 3).
+ * ------------------------------------------------------------------ */
+
+export interface SleeperRosterRaw {
+  owner_id?: string | null;
+  roster_id?: number;
+  players?: string[] | null;
+  starters?: string[] | null;
+  reserve?: string[] | null;
+  taxi?: string[] | null;
+}
+
+const INJURY: Record<string, PlayerStatus> = {
+  questionable: "Q",
+  doubtful: "D",
+  out: "O",
+  ir: "IR",
+  pup: "PUP",
+  sus: "SUSP",
+  suspended: "SUSP",
+  cov: "NA",
+  na: "NA",
+  dnr: "NA",
+};
+
+function sleeperInjury(raw: string | null | undefined): PlayerStatus {
+  const s = (raw ?? "").trim().toLowerCase();
+  if (!s || s === "active" || s === "healthy") return "OK";
+  return INJURY[s] ?? "NA";
+}
+
+const FLEX_ELIGIBLE = new Set(["RB", "WR", "TE"]);
+const OP_ELIGIBLE = new Set(["QB", "RB", "WR", "TE"]);
+
+/** Slot codes a player can fill (bench implied), from `fantasy_positions`. */
+export function eligibleSlotsFor(pos: string, sp: SleeperPlayer | undefined): string[] {
+  const raw = (sp?.fantasy_positions ?? [pos]).map((p) => p.toUpperCase());
+  const base = raw.filter((p) => POSITIONS.includes(p as Position));
+  if (base.length === 0 && pos) base.push(pos);
+  const out = [...new Set(base)];
+  if (out.some((p) => FLEX_ELIGIBLE.has(p))) out.push("W/R/T");
+  if (out.some((p) => OP_ELIGIBLE.has(p))) out.push("OP");
+  return out;
+}
+
+/** Flat list of starting slot codes to fill, from `roster_positions`
+ *  (bench / IR / taxi dropped), in table order. */
+export function startingSlotCodes(rosterPositions: readonly string[]): string[] {
+  const out: string[] = [];
+  for (const raw of rosterPositions) {
+    const code = SLOT_BY_SLEEPER[raw];
+    if (!code || code === "BN" || code === "IR" || code === "TAXI") continue;
+    out.push(code);
+  }
+  return out;
+}
+
+/** Player's position, falling back to DEF for a bare team-code id. */
+function playerPos(pid: string, sp: SleeperPlayer | undefined): string {
+  if (sp?.position) return sp.position.toUpperCase();
+  return /^[A-Z]{2,3}$/.test(pid) ? "DEF" : "";
+}
+
+export interface StatBundle {
+  week: ReadonlyMap<string, number>;
+  season: ReadonlyMap<string, number>;
+  actual: ReadonlyMap<string, number>;
+}
+
+/**
+ * A Sleeper roster → `Player[]`. `starters` is positionally aligned with
+ * `rosterPositions`; anything in `reserve` is IR; the rest is bench.
+ */
+export function mapRoster(
+  roster: SleeperRosterRaw,
+  rosterPositions: readonly string[],
+  byId: ReadonlyMap<string, SleeperPlayer>,
+  pts: StatBundle,
+): Player[] {
+  const reserve = new Set(roster.reserve ?? []);
+  const slotOf = new Map<string, string>();
+  (roster.starters ?? []).forEach((pid, i) => {
+    if (!pid || pid === "0") return;
+    const code = rosterPositions[i] ? SLOT_BY_SLEEPER[rosterPositions[i]!] : undefined;
+    slotOf.set(pid, !code || code === "BN" || code === "IR" ? "BN" : code);
+  });
+
+  return (roster.players ?? [])
+    .filter((pid): pid is string => !!pid && pid !== "0")
+    .map((pid) => {
+      const sp = byId.get(pid);
+      const pos = playerPos(pid, sp);
+      return {
+        id: pid,
+        name: pos === "DEF" ? `${pid.toUpperCase()} DEF` : sp ? sleeperName(sp) : pid,
+        team: pos === "DEF" ? pid.toUpperCase() : teamCode(sp?.team),
+        position: pos,
+        eligibleSlots: eligibleSlotsFor(pos, sp),
+        projectedPoints: pts.week.get(pid) ?? 0,
+        status: sleeperInjury(sp?.injury_status),
+        currentSlot: reserve.has(pid) ? "IR" : slotOf.get(pid) ?? "BN",
+        seasonProjectedPoints: pts.season.get(pid) ?? 0,
+        pointsSoFar: pts.actual.get(pid) ?? 0,
+      };
+    });
+}
+
+/** A dump player + Sleeper stats → `FreeAgent`. `trend` is the 24h add count
+ *  (0 when not trending); it drives the waiver-buzz signal via `pctChange`. */
+export function mapFreeAgent(sp: SleeperPlayer, pts: StatBundle, trend: number): FreeAgent {
+  const pos = (sp.position ?? "").toUpperCase();
+  const isDef = pos === "DEF";
+  const id = sp.player_id;
+  return {
+    id,
+    name: isDef ? `${id.toUpperCase()} DEF` : sleeperName(sp),
+    team: isDef ? id.toUpperCase() : teamCode(sp.team),
+    position: pos,
+    eligibleSlots: eligibleSlotsFor(pos, sp),
+    weekProj: pts.week.get(id) ?? 0,
+    seasonProj: pts.season.get(id) ?? 0,
+    actualSoFar: pts.actual.get(id) ?? 0,
+    availability: "FA", // Sleeper doesn't expose per-player waiver state cheaply
+    pctOwned: 0,
+    // normalise the raw add count (tens/hundreds of thousands) into a small buzz
+    pctChange: trend > 0 ? Math.min(1, Math.log10(trend + 1) / 6) : 0,
+    status: sleeperInjury(sp.injury_status),
+    bye: null,
+  };
 }

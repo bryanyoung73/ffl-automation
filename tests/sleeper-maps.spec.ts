@@ -5,9 +5,15 @@ import {
   mapSettingsFromDraft,
   mapDraftState,
   playerUniverse,
+  startingSlotCodes,
+  eligibleSlotsFor,
+  mapRoster,
+  mapFreeAgent,
   type SleeperDraftRaw,
   type SleeperLeagueRaw,
   type SleeperPickRaw,
+  type SleeperRosterRaw,
+  type StatBundle,
 } from "../src/providers/sleeper/maps.js";
 import type { SleeperPlayer } from "../src/intel/match.js";
 
@@ -131,4 +137,82 @@ test("playerUniverse keeps offense + DEF, drops IDP and inactive, ids DEF by tea
   expect(u.map((e) => e.player.id).sort()).toEqual(["4046", "5000", "KC"]);
   const def = u.find((e) => e.player.position === "DEF")!;
   expect(def.player).toMatchObject({ id: "KC", team: "KC", name: "KC DEF" });
+});
+
+test("startingSlotCodes expands roster_positions, dropping bench/IR", () => {
+  expect(
+    startingSlotCodes(["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "FLEX", "K", "DEF", "BN", "BN", "IR"]),
+  ).toEqual(["QB", "RB", "RB", "WR", "WR", "TE", "W/R/T", "W/R/T", "K", "DEF"]);
+});
+
+test("eligibleSlotsFor adds flex / superflex eligibility", () => {
+  expect(eligibleSlotsFor("RB", sp("x", "RB", "KC", { fantasy_positions: ["RB"] }))).toEqual(["RB", "W/R/T", "OP"]);
+  expect(eligibleSlotsFor("QB", sp("x", "QB", "KC", { fantasy_positions: ["QB"] }))).toEqual(["QB", "OP"]);
+  expect(eligibleSlotsFor("K", sp("x", "K", "KC", { fantasy_positions: ["K"] }))).toEqual(["K"]);
+  expect(eligibleSlotsFor("DEF", undefined)).toEqual(["DEF"]);
+});
+
+const bundle = (over: Partial<StatBundle> = {}): StatBundle => ({
+  week: new Map<string, number>(),
+  season: new Map<string, number>(),
+  actual: new Map<string, number>(),
+  ...over,
+});
+
+test("mapRoster: starter slots align with roster_positions, reserve is IR, rest is BN", () => {
+  const positions = ["QB", "RB", "RB", "WR", "FLEX", "K", "DEF", "BN", "BN"];
+  const roster: SleeperRosterRaw = {
+    owner_id: "u1",
+    players: ["qb", "rb1", "rb2", "wr1", "flex1", "k1", "def1", "bench1", "ir1"],
+    starters: ["qb", "rb1", "rb2", "wr1", "flex1", "k1", "def1"],
+    reserve: ["ir1"],
+  };
+  const byId = new Map<string, SleeperPlayer>([
+    ["qb", sp("qb", "QB", "KC", { fantasy_positions: ["QB"] })],
+    ["rb1", sp("rb1", "RB", "DET", { fantasy_positions: ["RB"], injury_status: "Questionable" })],
+    ["rb2", sp("rb2", "RB", "SF", { fantasy_positions: ["RB"] })],
+    ["wr1", sp("wr1", "WR", "MIN", { fantasy_positions: ["WR"] })],
+    ["flex1", sp("flex1", "WR", "LAR", { fantasy_positions: ["WR"] })],
+    ["k1", sp("k1", "K", "BAL", { fantasy_positions: ["K"] })],
+    ["def1", sp("DEF1", "DEF", null)],
+    ["bench1", sp("bench1", "RB", "NYG", { fantasy_positions: ["RB"] })],
+    ["ir1", sp("ir1", "WR", "MIA", { fantasy_positions: ["WR"], injury_status: "IR" })],
+  ]);
+  const pts = bundle({
+    week: new Map([["rb1", 14.2]]),
+    season: new Map([["rb1", 240]]),
+    actual: new Map([["rb1", 60]]),
+  });
+
+  const players = mapRoster(roster, positions, byId, pts);
+  const by = (id: string) => players.find((p) => p.id === id)!;
+  expect(by("qb").currentSlot).toBe("QB");
+  expect(by("flex1").currentSlot).toBe("W/R/T");
+  expect(by("bench1").currentSlot).toBe("BN");
+  expect(by("ir1").currentSlot).toBe("IR");
+  expect(by("rb1")).toMatchObject({ projectedPoints: 14.2, seasonProjectedPoints: 240, pointsSoFar: 60, status: "Q" });
+  expect(by("rb1").eligibleSlots).toEqual(["RB", "W/R/T", "OP"]);
+});
+
+test("mapFreeAgent fills projections and turns a trend count into buzz", () => {
+  const player = sp("7891", "WR", "SEA", { fantasy_positions: ["WR"], injury_status: "Doubtful" });
+  const pts = bundle({
+    week: new Map([["7891", 9.1]]),
+    season: new Map([["7891", 130]]),
+    actual: new Map([["7891", 22]]),
+  });
+  const fa = mapFreeAgent(player, pts, 50000);
+  expect(fa).toMatchObject({
+    id: "7891",
+    position: "WR",
+    weekProj: 9.1,
+    seasonProj: 130,
+    actualSoFar: 22,
+    availability: "FA",
+    status: "D",
+  });
+  expect(fa.eligibleSlots).toContain("W/R/T");
+  expect(fa.pctChange).toBeGreaterThan(0);
+  expect(fa.pctChange).toBeLessThanOrEqual(1);
+  expect(mapFreeAgent(player, pts, 0).pctChange).toBe(0);
 });

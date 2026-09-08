@@ -315,6 +315,34 @@ cliffs now work on Sleeper — full parity with the ESPN board.
 
 Phases 3 (roster/waivers) and 4 (writes) remain.
 
+## Addendum — Phase 3 shipped (2026-09-08)
+
+`getRoster` / `getFreeAgents` on Sleeper (needs `SLEEPER_LEAGUE_ID` — a mock
+draft has no roster and throws with that message).
+
+- `projections.ts` grew `fetchSleeperWeeklyProjections` (per-week, 3h) and
+  `fetchSleeperSeasonStats` (`api.sleeper.com/stats`, actuals, 6h); shared
+  `fetchRows` + the same `parseProjections` (identical row shape).
+- `maps.ts` (pure) + tests: `startingSlotCodes(roster_positions)`,
+  `eligibleSlotsFor(pos, sp)` (flex/superflex from `fantasy_positions`),
+  `mapRoster(roster, positions, byId, {week,season,actual})` (`starters[]`
+  positionally aligned to `roster_positions`; `reserve` → IR; rest → BN),
+  `mapFreeAgent(sp, bundle, trendCount)` (`pctChange` = a log-scaled trending
+  add count; `availability` always `"FA"`, `pctOwned` always 0 — Sleeper
+  doesn't expose per-player waiver state / % rostered cheaply).
+- `SleeperLeague`: `getRoster` finds my roster by `owner_id === userId`;
+  `getFreeAgents` = dump − union of all rosters, projections-filtered, sorted by
+  season proj, top 250. `currentWeek()` from `/state/nfl`; `statBundle()`
+  fetches weekly + season proj + season stats in parallel.
+- `show-roster.ts` / `waivers.ts` are already provider-agnostic — no CLI
+  changes.
+
+`tests/sleeper-maps.spec.ts` +4. Typecheck clean, 184 unit tests pass. Verified
+live against a real Sleeper league: `npm run roster` renders the full table
+with correct slots + weekly/season/actual points; `npm run waivers` produces
+ranked add/drop pairs. Only phase 4 (`applyLineup` writes, needs a token)
+remains.
+
 ## Open items / risks
 
 - ~~**FantasyPros ADP page structure**~~ — resolved by recon (2026-09-08). The

@@ -6,16 +6,28 @@ import type { LineupPlan } from "../../lineup/types.js";
 import type { DraftState, LeagueProvider, RosterReadResult } from "../types.js";
 import { SleeperClient } from "./client.js";
 import {
+  detectScoring,
   mapDraftState,
+  mapFreeAgent,
+  mapRoster,
   mapSettings,
   playerUniverse,
+  startingSlotCodes,
   type SleeperDraftRaw,
   type SleeperLeagueRaw,
   type SleeperPickRaw,
+  type SleeperRosterRaw,
+  type StatBundle,
 } from "./maps.js";
 import { attachAdp, fetchAdp } from "../../draft/adp.js";
-import { fetchSleeperProjections } from "./projections.js";
+import {
+  fetchSleeperProjections,
+  fetchSleeperSeasonStats,
+  fetchSleeperWeeklyProjections,
+} from "./projections.js";
 import { loadSleeperPlayers } from "../../intel/match.js";
+import type { SleeperPlayer } from "../../intel/match.js";
+import type { FreeAgent } from "../../waivers/types.js";
 
 /**
  * Sleeper provider — reads only, no auth. Phase 1: league settings, the live
@@ -83,12 +95,66 @@ export class SleeperLeague implements LeagueProvider {
       }));
   }
 
-  getRoster(): Promise<RosterReadResult> {
-    throw notSupported("Roster reads");
+  async getRoster(week?: number): Promise<RosterReadResult> {
+    const leagueId = this.requireLeague("Roster reads");
+    const [league, rosters, uid, dump, wk] = await Promise.all([
+      this.league(),
+      this.client.get<SleeperRosterRaw[]>(`league/${leagueId}/rosters`),
+      this.userId(),
+      loadSleeperPlayers(this.cacheDir),
+      week != null ? Promise.resolve(week) : this.currentWeek(),
+    ]);
+    if (!uid) {
+      throw new Error("Set SLEEPER_USERNAME (or SLEEPER_USER_ID) so I know which roster is yours.");
+    }
+    const mine = rosters.find((r) => r.owner_id === uid);
+    if (!mine) throw new Error(`No Sleeper roster owned by ${uid} in league ${leagueId}.`);
+
+    const scoring = detectScoring(league.scoring_settings);
+    const positions = league.roster_positions ?? [];
+    const byId = new Map(dump.map((p) => [p.player_id, p]));
+    const pts = await this.statBundle(scoring, wk);
+
+    return {
+      players: mapRoster(mine, positions, byId, pts),
+      startingSlotCodes: startingSlotCodes(positions),
+    };
   }
 
-  getFreeAgents(): Promise<never> {
-    throw notSupported("Waiver-wire analysis");
+  async getFreeAgents(week?: number): Promise<FreeAgent[]> {
+    const leagueId = this.requireLeague("Waiver-wire analysis");
+    const [league, rosters, dump, wk, trending] = await Promise.all([
+      this.league(),
+      this.client.get<SleeperRosterRaw[]>(`league/${leagueId}/rosters`),
+      loadSleeperPlayers(this.cacheDir),
+      week != null ? Promise.resolve(week) : this.currentWeek(),
+      this.client
+        .get<Array<{ player_id: string; count: number }>>(
+          `players/nfl/trending/add?lookback_hours=24&limit=300`,
+        )
+        .catch(() => [] as Array<{ player_id: string; count: number }>),
+    ]);
+
+    const rostered = new Set<string>();
+    for (const r of rosters) for (const p of r.players ?? []) if (p) rostered.add(p);
+    const trend = new Map(trending.map((t) => [t.player_id, t.count]));
+
+    const scoring = detectScoring(league.scoring_settings);
+    const pts = await this.statBundle(scoring, wk);
+
+    const fas: FreeAgent[] = [];
+    for (const sp of dump as SleeperPlayer[]) {
+      const pos = (sp.position ?? "").toUpperCase();
+      if (!["QB", "RB", "WR", "TE", "K", "DEF"].includes(pos)) continue;
+      if (sp.active === false && pos !== "DEF") continue;
+      if (rostered.has(sp.player_id)) continue;
+      const fa = mapFreeAgent(sp, pts, trend.get(sp.player_id) ?? 0);
+      // keep the pool tight: only players with a real season projection
+      if (fa.seasonProj <= 0 && (trend.get(sp.player_id) ?? 0) === 0) continue;
+      fas.push(fa);
+    }
+    fas.sort((a, b) => b.seasonProj - a.seasonProj || b.pctChange - a.pctChange);
+    return fas.slice(0, 250);
   }
 
   applyLineup(_plan: LineupPlan, _opts: { dryRun: boolean }): Promise<void> {
@@ -100,6 +166,33 @@ export class SleeperLeague implements LeagueProvider {
   }
 
   /* ---------------------------------------------------------------- */
+
+  private requireLeague(what: string): string {
+    if (!this.cfg.leagueId) {
+      throw new Error(
+        `${what} on Sleeper needs SLEEPER_LEAGUE_ID — a mock draft (SLEEPER_DRAFT_ID) ` +
+          `has no roster.`,
+      );
+    }
+    return this.cfg.leagueId;
+  }
+
+  private async currentWeek(): Promise<number> {
+    const s = await this.client.get<{ week?: number; display_week?: number }>("state/nfl");
+    return s.display_week ?? s.week ?? 1;
+  }
+
+  private async statBundle(
+    scoring: LeagueSettings["scoring"],
+    week: number,
+  ): Promise<StatBundle> {
+    const [wk, season, actual] = await Promise.all([
+      fetchSleeperWeeklyProjections(this.cacheDir, this.cfg.season, week, scoring),
+      fetchSleeperProjections(this.cacheDir, this.cfg.season, scoring),
+      fetchSleeperSeasonStats(this.cacheDir, this.cfg.season, scoring),
+    ]);
+    return { week: wk, season, actual };
+  }
 
   private async userId(): Promise<string | null> {
     if (this.resolvedUserId) return this.resolvedUserId;

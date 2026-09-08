@@ -11,8 +11,8 @@ TypeScript automation for a fantasy football team, against Yahoo or ESPN
 2. **Weekly lineup optimizer** (`npm run roster` / `npm run lineup`) — verified
    live read-side on Yahoo; the real submit and the ESPN roster path are not
    yet exercised (see Current status).
-3. **Waiver wire** (`npm run waivers`, ESPN only) — ranks free agents + your
-   bench by a blended value (ROS + this week + buzz), pairs adds with legal
+3. **Waiver wire** (`npm run waivers`, ESPN + Sleeper) — ranks free agents +
+   your bench by a blended value (ROS + this week + buzz), pairs adds with legal
    drops, lists DEF/K streams. Phase 1; see
    `docs/specs/2026-09-03-waiver-wire.md`.
 4. **Player intel** (`src/intel/`) — chatter/news/injury/Vegas signal feeding
@@ -50,8 +50,10 @@ source for every command. All implement `LeagueProvider`
   `src/draft/adp.ts` FantasyFootballCalculator ADP, which also brings
   `high`/`low`/`stdev`, + Sleeper's own season projections
   (`sleeper/projections.ts`, `api.sleeper.com`) → VOR, parity with the ESPN
-  board). `getRoster` / `getFreeAgents` / `applyLineup` throw `NOT_SUPPORTED`
-  (phases 3–4). Pure mappers in `maps.ts`. Config:
+  board). `getRoster` / `getFreeAgents` also work (needs `SLEEPER_LEAGUE_ID`,
+  not a mock): rosters from `/league/<id>/rosters` + weekly/season projections
+  + season stats + trending-add buzz. `applyLineup` throws `NOT_SUPPORTED`
+  (phase 4 — needs a token). Pure mappers in `maps.ts`. Config:
   `SLEEPER_LEAGUE_ID` **or** `SLEEPER_DRAFT_ID` (a mock draft has no league —
   settings then come from the draft's own `slots_*`), plus `SLEEPER_USERNAME`
   (all public). See `docs/specs/2026-09-08-sleeper-provider.md`.
@@ -126,8 +128,8 @@ src/
     espn/EspnLeague.ts      provider impl + exported pure mappers
     sleeper/client.ts       fetch wrapper: no auth, GET memo, noCache
     sleeper/maps.ts         PURE: slot map, scoring, settings/draft/pick mappers
-    sleeper/projections.ts  PURE parse + fetch: api.sleeper.com season projections -> VOR
-    sleeper/SleeperLeague.ts provider impl (draft only in v1)
+    sleeper/projections.ts  PURE parse + fetch: api.sleeper.com season/weekly proj + stats
+    sleeper/SleeperLeague.ts provider impl: draft + roster + free agents (no writes)
   browser.ts           browser context from saved storageState (Yahoo only)
   pages/
     TeamPage.ts             login-state checks, output/ debug dumps
