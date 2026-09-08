@@ -109,16 +109,24 @@ const SLOT_KEY_BY_DRAFT: Record<string, string> = {
 export function mapSettingsFromDraft(draft: SleeperDraftRaw): LeagueSettings {
   const s = draft.settings ?? {};
   const starters: LeagueSettings["starters"] = {};
+  let starterCount = 0;
   for (const [key, code] of Object.entries(SLOT_KEY_BY_DRAFT)) {
     const n = s[key] ?? 0;
-    if (n > 0) starters[code as SlotCode] = (starters[code as SlotCode] ?? 0) + n;
+    if (n > 0) {
+      starters[code as SlotCode] = (starters[code as SlotCode] ?? 0) + n;
+      starterCount += n;
+    }
   }
   const type = (draft.type ?? "snake").toLowerCase();
+  // Mock drafts often omit `slots_bn` — bench is then rounds minus starters, so
+  // `totalRounds()` still lines up with the real draft length.
+  const rounds = Number(s.rounds) || 0;
+  const benchSize = Number(s.slots_bn) || Math.max(0, rounds - starterCount);
   return {
     teams: Number(s.teams) || 0,
     scoring: SCORING_BY_TYPE[(draft.metadata?.scoring_type ?? "").toLowerCase()] ?? "ppr",
     starters,
-    benchSize: Number(s.slots_bn) || 0,
+    benchSize,
     draftType: type === "auction" ? "auction" : "snake",
   };
 }

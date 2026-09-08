@@ -55,21 +55,34 @@ export function computeAdvice(input: AdviceInput): DraftAdvice {
   const done = state.drafted || (totalPicks > 0 && completed >= totalPicks);
   const overall = done ? completed : completed + 1;
 
-  const mineRows = myRoster(state, myTeamId, board.rows);
-  const myRosterView = rosterView(mineRows);
-
   // Slot: round 1 is authoritative once it contains my pick; else the passed value.
   const detected =
     state.picks.find((p) => p.round === 1 && p.teamId === myTeamId)?.pickInRound ?? null;
   const slotRaw = detected ?? input.mySlot ?? null;
   const slot = slotRaw != null && slotRaw >= 1 && slotRaw <= settings.teams ? slotRaw : null;
 
+  const myOveralls = slot != null ? mySlots(slot, settings.teams, rounds) : [];
+  const myOverallSet = new Set(myOveralls);
+
+  // My picks: by team id when the provider identifies my team, else by whether
+  // the pick's overall number is one of my snake slots (needs `slot`). The
+  // fallback covers a mock draft with no username set, or any provider where
+  // picks carry no roster id.
+  let mineRows = myRoster(state, myTeamId, board.rows);
+  if (mineRows.length === 0 && myOverallSet.size > 0) {
+    const byId = new Map(board.rows.map((r) => [r.player.id, r]));
+    mineRows = state.picks
+      .filter((p) => myOverallSet.has(p.overall))
+      .map((p) => byId.get(p.playerId))
+      .filter((r): r is BoardRow => r != null);
+  }
+  const myRosterView = rosterView(mineRows);
+
   let myNextOverall: number | null = null;
   let untilNext: number | null = null;
   if (slot != null) {
-    const mine = mySlots(slot, settings.teams, rounds);
-    myNextOverall = nextPick(completed, mine);
-    untilNext = picksUntilNext(completed, mine);
+    myNextOverall = nextPick(completed, myOveralls);
+    untilNext = picksUntilNext(completed, myOveralls);
   }
 
   const shell = {

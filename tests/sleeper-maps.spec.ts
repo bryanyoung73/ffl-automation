@@ -79,6 +79,18 @@ test("mapSettingsFromDraft defaults scoring to ppr when scoring_type is missing"
   expect(s.teams).toBe(12);
 });
 
+test("mapSettingsFromDraft infers bench from rounds when slots_bn is absent", () => {
+  // 10 starting slots, 15 rounds, no slots_bn -> bench is the remaining 5
+  const s = mapSettingsFromDraft({
+    settings: {
+      teams: 10,
+      rounds: 15,
+      slots_qb: 1, slots_rb: 2, slots_wr: 2, slots_te: 1, slots_flex: 2, slots_k: 1, slots_def: 1,
+    },
+  });
+  expect(s.benchSize).toBe(5);
+});
+
 test("mapDraftState maps picks in order, with my slot and roster id", () => {
   const picks: SleeperPickRaw[] = [
     { pick_no: 2, round: 1, roster_id: 5, player_id: "200" },
