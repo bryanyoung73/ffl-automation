@@ -19,11 +19,14 @@ export interface SleeperLeagueRaw {
 
 export interface SleeperDraftRaw {
   draft_id?: string;
+  league_id?: string | null;
   status?: string;
   type?: string;
   draft_order?: Record<string, number> | null;
   slot_to_roster_id?: Record<string, number> | null;
-  settings?: { teams?: number; rounds?: number };
+  /** teams / rounds / slots_qb / slots_flex / slots_bn / … */
+  settings?: Record<string, number | undefined>;
+  metadata?: { scoring_type?: string; name?: string };
 }
 
 export interface SleeperPickRaw {
@@ -70,7 +73,62 @@ export function detectScoring(s: { rec?: number } | undefined): LeagueSettings["
   return "standard";
 }
 
-export function mapSettings(league: SleeperLeagueRaw, draft: SleeperDraftRaw): LeagueSettings {
+/** Sleeper `metadata.scoring_type` → our scoring. */
+const SCORING_BY_TYPE: Record<string, LeagueSettings["scoring"]> = {
+  ppr: "ppr",
+  half_ppr: "half-ppr",
+  std: "standard",
+  "2qb": "ppr",
+};
+
+/** Draft-object slot key → our slot code (mock drafts carry `slots_*` counts
+ *  in `settings` instead of a `roster_positions` array). */
+const SLOT_KEY_BY_DRAFT: Record<string, string> = {
+  slots_qb: "QB",
+  slots_rb: "RB",
+  slots_wr: "WR",
+  slots_te: "TE",
+  slots_k: "K",
+  slots_def: "DEF",
+  slots_flex: "W/R/T",
+  slots_super_flex: "OP",
+  slots_wrrb_flex: "W/R",
+  slots_rec_flex: "W/T",
+  slots_wrte_flex: "W/T",
+  slots_idp_flex: "IDP",
+  slots_dl: "DL",
+  slots_lb: "LB",
+  slots_db: "DB",
+};
+
+/**
+ * Settings from the draft object alone — for a mock draft (no league) or as a
+ * fallback. Roster shape comes from `settings.slots_*`, scoring from
+ * `metadata.scoring_type` (default ppr, the Sleeper mock default).
+ */
+export function mapSettingsFromDraft(draft: SleeperDraftRaw): LeagueSettings {
+  const s = draft.settings ?? {};
+  const starters: LeagueSettings["starters"] = {};
+  for (const [key, code] of Object.entries(SLOT_KEY_BY_DRAFT)) {
+    const n = s[key] ?? 0;
+    if (n > 0) starters[code as SlotCode] = (starters[code as SlotCode] ?? 0) + n;
+  }
+  const type = (draft.type ?? "snake").toLowerCase();
+  return {
+    teams: Number(s.teams) || 0,
+    scoring: SCORING_BY_TYPE[(draft.metadata?.scoring_type ?? "").toLowerCase()] ?? "ppr",
+    starters,
+    benchSize: Number(s.slots_bn) || 0,
+    draftType: type === "auction" ? "auction" : "snake",
+  };
+}
+
+export function mapSettings(
+  league: SleeperLeagueRaw | null,
+  draft: SleeperDraftRaw,
+): LeagueSettings {
+  if (!league || !league.roster_positions?.length) return mapSettingsFromDraft(draft);
+
   const teams =
     league.total_rosters ?? league.settings?.num_teams ?? draft.settings?.teams ?? 0;
   const scoring = detectScoring(league.scoring_settings);

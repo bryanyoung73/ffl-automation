@@ -38,7 +38,11 @@ async function main(): Promise<void> {
   let slot = intFlag("slot") ?? null;
   const slotFromFlag = slot != null;
   let myTeamId = config.espn?.teamId ?? 0;
-  const leagueId = config.espn?.leagueId ?? config.sleeper?.leagueId ?? "league";
+  const leagueId =
+    config.espn?.leagueId ??
+    config.sleeper?.leagueId ??
+    config.sleeper?.draftId ??
+    "league";
   const record = hasFlag("no-record") ? false : hasFlag("record") || !once;
 
   const provider = getProvider(config);

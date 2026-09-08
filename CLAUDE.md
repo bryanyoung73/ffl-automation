@@ -50,8 +50,9 @@ source for every command. All implement `LeagueProvider`
   `src/draft/adp.ts` FantasyFootballCalculator ADP, which also brings
   `high`/`low`/`stdev`). `getRoster` / `getFreeAgents` / `applyLineup` throw
   `NOT_SUPPORTED` (phases 3–4). Pure mappers in `maps.ts`. Config:
-  `SLEEPER_LEAGUE_ID` + `SLEEPER_USERNAME` (both public). See
-  `docs/specs/2026-09-08-sleeper-provider.md`.
+  `SLEEPER_LEAGUE_ID` **or** `SLEEPER_DRAFT_ID` (a mock draft has no league —
+  settings then come from the draft's own `slots_*`), plus `SLEEPER_USERNAME`
+  (all public). See `docs/specs/2026-09-08-sleeper-provider.md`.
 
 ## Current status (2026-09-02)
 

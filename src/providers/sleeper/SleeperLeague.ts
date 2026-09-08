@@ -6,7 +6,6 @@ import type { LineupPlan } from "../../lineup/types.js";
 import type { DraftState, LeagueProvider, RosterReadResult } from "../types.js";
 import { SleeperClient } from "./client.js";
 import {
-  detectScoring,
   mapDraftState,
   mapSettings,
   playerUniverse,
@@ -40,7 +39,11 @@ export class SleeperLeague implements LeagueProvider {
   }
 
   async getLeagueSettings(): Promise<LeagueSettings> {
-    const [league, draft] = await Promise.all([this.league(), this.draft()]);
+    const draft = await this.draft();
+    // A mock draft (SLEEPER_DRAFT_ID, or a draft whose league is gone) has no
+    // league resource — derive settings from the draft's own slots_* counts.
+    const league =
+      this.cfg.leagueId && !this.cfg.draftId ? await this.league() : null;
     return mapSettings(league, draft);
   }
 
@@ -55,12 +58,12 @@ export class SleeperLeague implements LeagueProvider {
   }
 
   async getDraftBoard(): Promise<BoardEntry[]> {
-    const [league, dump] = await Promise.all([
-      this.league(),
+    const [settings, dump] = await Promise.all([
+      this.getLeagueSettings(),
       loadSleeperPlayers(this.cacheDir),
     ]);
-    const scoring = detectScoring(league.scoring_settings);
-    const teams = league.total_rosters ?? league.settings?.num_teams ?? 10;
+    const scoring = settings.scoring;
+    const teams = settings.teams || 10;
 
     const universe = playerUniverse(dump);
     const adp = await fetchAdp(this.cacheDir, scoring, teams, this.cfg.season);
@@ -99,10 +102,14 @@ export class SleeperLeague implements LeagueProvider {
   }
 
   private league(): Promise<SleeperLeagueRaw> {
+    if (!this.cfg.leagueId) {
+      throw new Error("SLEEPER_LEAGUE_ID is not set (running against a bare draft id).");
+    }
     return this.client.get<SleeperLeagueRaw>(`league/${this.cfg.leagueId}`);
   }
 
   private async draftId(): Promise<string> {
+    if (this.cfg.draftId) return this.cfg.draftId;
     if (this.draftIdCache) return this.draftIdCache;
     const league = await this.league();
     if (league.draft_id) {

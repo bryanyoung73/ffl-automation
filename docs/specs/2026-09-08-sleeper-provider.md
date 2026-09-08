@@ -267,9 +267,29 @@ dump (12,226) → `playerUniverse` (878 offense+DEF) → FFC ADP (255) →
 `high`/`low`/`stdev` and byes. Gibbs σ0.6 vs James Cook σ2.8 — the per-player
 survival sigma the model wanted.
 
-**Not verified** — `getLeagueSettings` / `getDraftState` need a real
-`SLEEPER_LEAGUE_ID` (the mappers are unit-tested against realistic fixtures).
-Point `.env` at a Sleeper mock draft to shake out the live path.
+## Addendum — mock-draft support (2026-09-08)
+
+A mock draft has **no league** (`league_id: null`); its roster shape lives in
+the draft object's `settings.slots_*` and scoring in `metadata.scoring_type`.
+Added:
+
+- `SLEEPER_DRAFT_ID` config — an alternative to `SLEEPER_LEAGUE_ID` (one
+  required). `SleeperLeague.draftId()` short-circuits to it; `league()` is never
+  called.
+- `mapSettingsFromDraft(draft)` (pure) — `slots_qb/rb/wr/te/k/def/flex/
+  super_flex/…` → starters, `slots_bn` → bench, `scoring_type`
+  (`ppr`/`half_ppr`/`std`, default `ppr`) → scoring. `mapSettings(null, draft)`
+  delegates to it, and so does the league path when `roster_positions` is
+  empty.
+- `getDraftBoard` derives scoring/teams via `getLeagueSettings` (handles both).
+- `env.example` + docs.
+
+`tests/sleeper-maps.spec.ts` +2. **Verified live** against a real Sleeper draft
+via `SLEEPER_DRAFT_ID` alone: `getLeagueSettings` → `8-team ppr, 2 flex, 5
+bench` from the draft's slots; `getDraftState` → 120 picks mapped;
+`SLEEPER_USERNAME` → `mySlot` / `myTeamId` resolved from `draft_order` /
+`slot_to_roster_id`, and `npm run draft --once` rendered that user's real
+roster. 175 unit tests pass.
 
 ## Open items / risks
 

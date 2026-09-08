@@ -52,7 +52,10 @@ export interface EspnConfig {
 }
 
 export interface SleeperConfig {
-  leagueId: string;
+  /** SLEEPER_LEAGUE_ID, or null when running against a bare draft/mock. */
+  leagueId: string | null;
+  /** SLEEPER_DRAFT_ID — a mock draft has no league; point straight at it. */
+  draftId: string | null;
   /** Explicit SLEEPER_USER_ID, or null to resolve lazily from `username`. */
   userId: string | null;
   username: string | null;
@@ -100,12 +103,20 @@ function readProvider(): Provider {
 }
 
 function loadSleeperConfig(): SleeperConfig {
-  const leagueId = required("SLEEPER_LEAGUE_ID");
+  const leagueId = process.env.SLEEPER_LEAGUE_ID?.trim() || null;
+  const draftId = process.env.SLEEPER_DRAFT_ID?.trim() || null;
+  if (!leagueId && !draftId) {
+    throw new Error(
+      "Set SLEEPER_LEAGUE_ID (from sleeper.com/leagues/<id>) or SLEEPER_DRAFT_ID " +
+        "(a mock draft, from sleeper.com/draft/nfl/<id>) in .env.",
+    );
+  }
   const userId = process.env.SLEEPER_USER_ID?.trim() || null;
   const username = process.env.SLEEPER_USERNAME?.trim() || null;
   const season = optionalInt("SLEEPER_SEASON") ?? new Date().getFullYear();
   return {
     leagueId,
+    draftId,
     userId,
     username,
     season,

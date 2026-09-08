@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import {
   detectScoring,
   mapSettings,
+  mapSettingsFromDraft,
   mapDraftState,
   playerUniverse,
   type SleeperDraftRaw,
@@ -41,6 +42,41 @@ test("mapSettings derives teams, scoring, starters (FLEX/SUPER_FLEX), bench; IR 
   expect(s.starters).toEqual({
     QB: 1, RB: 2, WR: 2, TE: 1, "W/R/T": 1, OP: 1, K: 1, DEF: 1,
   });
+});
+
+test("mapSettings falls back to the draft's slots_* when there's no league (mock draft)", () => {
+  const mock: SleeperDraftRaw = {
+    draft_id: "m1",
+    league_id: null,
+    type: "snake",
+    status: "pre_draft",
+    metadata: { scoring_type: "half_ppr" },
+    settings: {
+      teams: 8,
+      rounds: 15,
+      slots_qb: 1,
+      slots_rb: 2,
+      slots_wr: 2,
+      slots_te: 1,
+      slots_flex: 2,
+      slots_k: 1,
+      slots_def: 1,
+      slots_bn: 6,
+    },
+  };
+  // both the explicit helper and mapSettings(null, …) should agree
+  for (const s of [mapSettingsFromDraft(mock), mapSettings(null, mock)]) {
+    expect(s.teams).toBe(8);
+    expect(s.scoring).toBe("half-ppr");
+    expect(s.benchSize).toBe(6);
+    expect(s.starters).toEqual({ QB: 1, RB: 2, WR: 2, TE: 1, "W/R/T": 2, K: 1, DEF: 1 });
+  }
+});
+
+test("mapSettingsFromDraft defaults scoring to ppr when scoring_type is missing", () => {
+  const s = mapSettingsFromDraft({ settings: { teams: 12, slots_qb: 1, slots_bn: 5 } });
+  expect(s.scoring).toBe("ppr");
+  expect(s.teams).toBe(12);
 });
 
 test("mapDraftState maps picks in order, with my slot and roster id", () => {
