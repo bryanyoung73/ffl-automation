@@ -28,7 +28,8 @@ async function main(): Promise<void> {
     console.error(
       "`npm run draft` needs PROVIDER=espn or PROVIDER=sleeper — Yahoo drafts run off-platform.",
     );
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
 
   const once = hasFlag("once");
@@ -215,6 +216,8 @@ function appendLine(path: string, obj: unknown): void {
 }
 
 main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err);
-  process.exit(1);
+  console.error(`\n${err instanceof Error ? err.message : err}`);
+  // Set the code and let the event loop drain — an abrupt process.exit() while
+  // a fetch is in flight trips a libuv assertion on Windows + tsx.
+  process.exitCode = 1;
 });

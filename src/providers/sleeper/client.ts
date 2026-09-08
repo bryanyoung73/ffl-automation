@@ -30,20 +30,28 @@ export class SleeperClient {
 
   private async parse<T>(res: Response, path: string): Promise<T> {
     const text = await res.text();
+    // Sleeper's error bodies are unhelpful ("null", ""), so only surface a
+    // snippet when it actually carries information.
+    const snippet = text.trim();
+    const detail = snippet && snippet !== "null" ? `\n${snippet.slice(0, 200)}` : "";
+
     if (!res.ok) {
-      const snippet = text.slice(0, 200);
       if (res.status === 404) {
         throw new Error(
-          `Sleeper GET ${path} -> 404. Check SLEEPER_LEAGUE_ID / SLEEPER_USERNAME ` +
-            `in .env.\n${snippet}`,
+          `Sleeper GET ${path} -> 404 (not found). The id may be wrong, from a ` +
+            `different season, or a draft id rather than a league id. Check ` +
+            `SLEEPER_LEAGUE_ID / SLEEPER_USERNAME in .env.${detail}`,
         );
       }
-      throw new Error(`Sleeper GET ${path} -> ${res.status}.\n${snippet}`);
+      throw new Error(`Sleeper GET ${path} -> ${res.status}.${detail}`);
+    }
+    if (snippet === "" || snippet === "null") {
+      throw new Error(`Sleeper GET ${path}: empty response (id not found?).`);
     }
     try {
       return JSON.parse(text) as T;
     } catch {
-      throw new Error(`Sleeper GET ${path}: response was not JSON.\n${text.slice(0, 200)}`);
+      throw new Error(`Sleeper GET ${path}: response was not JSON.${detail}`);
     }
   }
 }
