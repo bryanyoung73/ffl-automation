@@ -91,6 +91,36 @@ export function rosterNeeds(
   });
 }
 
+/**
+ * Escalate still-open *starting* slots as the draft winds down. `rosterNeeds`
+ * caps K/DEF low so you don't reach for a kicker in round 3 — but that cap is
+ * wrong at the end of the draft with an unfilled mandatory slot. Two effects:
+ *
+ * - a gentle ramp once the draft is past ~55% done, so a needed K/DEF starts
+ *   beating pure depth by the late-middle rounds;
+ * - "last call": when you have no more picks than you have holes, every hole
+ *   becomes urgent (you'll otherwise end with an empty starting slot).
+ *
+ * @param myPicksLeft  my remaining picks; pass a large number when unknown
+ * @param pctComplete  fraction of the whole draft done, 0–1
+ */
+export function escalateLateNeeds(
+  needs: readonly PositionNeed[],
+  opts: { myPicksLeft: number; pctComplete: number },
+): PositionNeed[] {
+  const holeCount = needs.reduce((s, n) => s + n.startersLeft, 0);
+  const lastCall = holeCount > 0 && opts.myPicksLeft <= holeCount;
+  const ramp = Math.max(0, opts.pctComplete - 0.55) * 6; // 0 until ~55%, ~2.7 by the end
+
+  return needs.map((n) => {
+    if (n.startersLeft <= 0) return n;
+    const weight = lastCall
+      ? Math.max(n.weight, 5 + n.startersLeft) // must-fill: dominate depth picks
+      : round2(n.weight + ramp);
+    return { ...n, weight };
+  });
+}
+
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }

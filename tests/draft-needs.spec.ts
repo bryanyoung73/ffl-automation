@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { myRoster, rosterNeeds } from "../src/draft/live/needs.js";
+import { escalateLateNeeds, myRoster, rosterNeeds } from "../src/draft/live/needs.js";
 import type { BoardEntry } from "../src/draft/board.js";
 import type { LeagueSettings, Position } from "../src/draft/types.js";
 import type { DraftState } from "../src/providers/types.js";
@@ -61,6 +61,36 @@ test("a backup QB falls to the QB depth floor", () => {
   expect(qb.startersLeft).toBe(0);
   expect(qb.weight).toBe(0.2);
   expect(qb.weight).toBeGreaterThan(0); // never exactly zero
+});
+
+test("escalateLateNeeds: an open K slot ramps up late and goes urgent at last call", () => {
+  // full roster except the K slot -> K is the only hole, capped at 0.9;
+  // WR is filled (pure depth, weight 0.5).
+  const roster = [
+    e("qb", "QB"),
+    e("rb1", "RB"), e("rb2", "RB"), e("rb3", "RB"),
+    e("wr1", "WR"), e("wr2", "WR"), e("wr3", "WR"),
+    e("te1", "TE"),
+    e("def1", "DEF"),
+  ];
+  const base = rosterNeeds(roster, settings);
+  expect(need(base, "K").weight).toBe(0.9);
+  expect(need(base, "K").startersLeft).toBe(1);
+  expect(need(base, "WR").weight).toBe(0.5); // filled -> depth floor
+
+  // early: nothing changes
+  expect(need(escalateLateNeeds(base, { myPicksLeft: 12, pctComplete: 0.3 }), "K").weight).toBe(0.9);
+
+  // late-middle: the ramp lifts the open K well above depth picks
+  const late = escalateLateNeeds(base, { myPicksLeft: 4, pctComplete: 0.8 });
+  expect(need(late, "K").weight).toBeCloseTo(0.9 + (0.8 - 0.55) * 6); // 2.4
+  expect(need(late, "K").weight).toBeGreaterThan(need(late, "WR").weight);
+  expect(need(late, "WR").weight).toBe(0.5); // filled slot untouched
+
+  // last call: as many picks left as holes -> the hole is must-fill
+  const lastCall = escalateLateNeeds(base, { myPicksLeft: 1, pctComplete: 0.95 });
+  expect(need(lastCall, "K").weight).toBe(6); // 5 + startersLeft(1)
+  expect(need(lastCall, "WR").weight).toBe(0.5);
 });
 
 test("myRoster resolves my picks against the board, ignoring other teams and off-board picks", () => {

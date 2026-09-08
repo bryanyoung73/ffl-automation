@@ -2,7 +2,7 @@ import { POSITIONS, type LeagueSettings, type Position } from "../types.js";
 import type { Board, BoardRow } from "../board.js";
 import type { DraftState } from "../../providers/types.js";
 import { mySlots, nextPick, picksUntilNext } from "./snake.js";
-import { myRoster, rosterNeeds } from "./needs.js";
+import { escalateLateNeeds, myRoster, rosterNeeds } from "./needs.js";
 import { tierCliffs, positionRuns } from "./context.js";
 import { willLast, type Survival, type SurvivalBucket } from "./survival.js";
 import { computeVona } from "./vona.js";
@@ -103,7 +103,13 @@ export function computeAdvice(input: AdviceInput): DraftAdvice {
   const taken = new Set(state.picks.map((p) => p.playerId));
   const available = board.rows.filter((r) => !taken.has(r.player.id));
 
-  const needByPos = new Map(rosterNeeds(mineRows, settings).map((n) => [n.position, n]));
+  const myPicksLeft =
+    slot != null ? myOveralls.filter((o) => o > completed).length : Number.POSITIVE_INFINITY;
+  const needs = escalateLateNeeds(rosterNeeds(mineRows, settings), {
+    myPicksLeft,
+    pctComplete: totalPicks > 0 ? completed / totalPicks : 0,
+  });
+  const needByPos = new Map(needs.map((n) => [n.position, n]));
   const cliffs = tierCliffs(available, settings);
   const cliffByPos = new Map(cliffs.map((c) => [c.position, c]));
   const runs = positionRuns(state, board.rows, settings.teams);
