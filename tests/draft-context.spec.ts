@@ -3,6 +3,7 @@ import { tierCliffs, positionRuns } from "../src/draft/live/context.js";
 import type { BoardEntry, BoardRow } from "../src/draft/board.js";
 import type { LeagueSettings, Position } from "../src/draft/types.js";
 import type { DraftPick, DraftState } from "../src/providers/types.js";
+import { makeBoardRow } from "./helpers/board.js";
 
 const settings: LeagueSettings = {
   teams: 10,
@@ -17,35 +18,13 @@ function row(
   position: Position,
   opts: { name?: string; ecrTier?: number | null; vor?: number | null; adp?: number | null } = {},
 ): BoardRow {
-  return {
+  return makeBoardRow({
     rank,
     player: { id: `p${rank}`, name: opts.name ?? `Player ${rank}`, position, team: "KC", bye: null },
     adp: opts.adp ?? rank,
-    xRank: null,
-    listRank: rank,
-    yahooExpertPos: null,
-    yahooGap: null,
-    ecrRank: null,
-    ecrPosRank: null,
     ecrTier: opts.ecrTier ?? null,
-    ecrRankMin: null,
-    ecrRankMax: null,
-    ecrRankStd: null,
-    adpHigh: null,
-    adpLow: null,
-    adpStdev: null,
-    tier: 1,
-    note: "",
-    adpRank: rank,
-    blendShift: 0,
-    intelNote: "",
-    intelImpact: 0,
-    adpChange: null,
-    adpTrend: "",
     vor: opts.vor ?? null,
-    vorRank: null,
-    vorGap: null,
-  };
+  });
 }
 
 test("tierCliffs flags a near-empty ECR tier with a real drop", () => {

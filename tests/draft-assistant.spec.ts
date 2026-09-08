@@ -3,6 +3,7 @@ import { computeAdvice } from "../src/draft/live/assistant.js";
 import type { Board, BoardRow } from "../src/draft/board.js";
 import type { LeagueSettings, Position } from "../src/draft/types.js";
 import type { DraftPick, DraftState } from "../src/providers/types.js";
+import { makeBoard, makeBoardRow } from "./helpers/board.js";
 
 const settings: LeagueSettings = {
   teams: 4,
@@ -25,51 +26,23 @@ interface RowOpts {
 }
 
 function r(rank: number, position: Position, o: RowOpts = {}): BoardRow {
-  return {
+  return makeBoardRow({
     rank,
-    player: { id: o.name ?? `p${rank}`, name: o.name ?? `p${rank}`, position, team: "KC", bye: null },
+    name: o.name ?? `p${rank}`,
+    position,
     adp: o.adp ?? rank,
-    xRank: null,
-    listRank: rank,
-    yahooExpertPos: null,
-    yahooGap: null,
+    tier: Math.ceil(rank / settings.teams),
+    intelNote: o.intelNote ?? "",
     ecrRank: o.ecrRank ?? null,
     ecrPosRank: o.ecrPosRank ?? null,
     ecrTier: o.ecrTier ?? null,
-    ecrRankMin: null,
-    ecrRankMax: null,
-    ecrRankStd: null,
-    adpHigh: null,
-    adpLow: null,
-    adpStdev: null,
-    tier: Math.ceil(rank / settings.teams),
-    note: "",
-    adpRank: rank,
-    blendShift: 0,
-    intelNote: o.intelNote ?? "",
-    intelImpact: 0,
-    adpChange: null,
-    adpTrend: "",
     vor: o.vor ?? null,
     vorRank: o.vorRank ?? null,
-    vorGap: null,
-  };
+  });
 }
 
 function board(rows: BoardRow[]): Board {
-  return {
-    generatedAt: "2026-09-03T00:00:00.000Z",
-    teams: settings.teams,
-    threshold: 18,
-    positionFilter: null,
-    sourceLabel: "ESPN",
-    expertLabel: "ECR",
-    rows,
-    disagreements: 0,
-    verdict: "",
-    blended: false,
-    intelAsOf: "",
-  };
+  return makeBoard(rows, { teams: settings.teams });
 }
 
 function pick(overall: number, teamId: number, playerId: string, round = 1, pickInRound = overall): DraftPick {

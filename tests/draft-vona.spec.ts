@@ -2,37 +2,14 @@ import { test, expect } from "@playwright/test";
 import { computeVona } from "../src/draft/live/vona.js";
 import type { BoardRow } from "../src/draft/board.js";
 import type { Position } from "../src/draft/types.js";
+import { makeBoardRow } from "./helpers/board.js";
 
 function row(id: string, position: Position, vor: number | null, adp: number | null): BoardRow {
-  return {
-    rank: 1,
+  return makeBoardRow({
     player: { id, name: id.toUpperCase(), position, team: "KC", bye: null },
     adp,
-    xRank: null,
-    listRank: 1,
-    yahooExpertPos: null,
-    yahooGap: null,
-    ecrRank: null,
-    ecrPosRank: null,
-    ecrTier: null,
-    ecrRankMin: null,
-    ecrRankMax: null,
-    ecrRankStd: null,
-    adpHigh: null,
-    adpLow: null,
-    adpStdev: null,
-    tier: 1,
-    note: "",
-    adpRank: 1,
-    blendShift: 0,
-    intelNote: "",
-    intelImpact: 0,
-    adpChange: null,
-    adpTrend: "",
     vor,
-    vorRank: null,
-    vorGap: null,
-  };
+  });
 }
 
 test("gap is candidate VOR minus the best same-position player likely to last", () => {

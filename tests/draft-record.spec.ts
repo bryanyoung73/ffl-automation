@@ -5,6 +5,7 @@ import type { Board, BoardRow } from "../src/draft/board.js";
 import type { LeagueSettings, Position } from "../src/draft/types.js";
 import type { DraftAdvice } from "../src/draft/live/types.js";
 import type { DraftPick, DraftState } from "../src/providers/types.js";
+import { makeBoard, makeBoardRow } from "./helpers/board.js";
 
 const settings: LeagueSettings = {
   teams: 10,
@@ -16,55 +17,25 @@ const settings: LeagueSettings = {
 const ME = 5;
 
 function row(id: string, position: Position, o: { adp?: number; vor?: number; ecrRank?: number; ecrTier?: number } = {}): BoardRow {
-  return {
-    rank: 1,
+  return makeBoardRow({
     player: { id, name: id.toUpperCase(), position, team: "KC", bye: null },
     adp: o.adp ?? null,
-    xRank: null,
-    listRank: 1,
-    yahooExpertPos: null,
-    yahooGap: null,
-    ecrRank: o.ecrRank ?? null,
-    ecrPosRank: null,
-    ecrTier: o.ecrTier ?? null,
-    ecrRankMin: null,
-    ecrRankMax: null,
-    ecrRankStd: null,
-    adpHigh: null,
-    adpLow: null,
-    adpStdev: null,
-    tier: 1,
-    note: "",
     adpRank: 1,
-    blendShift: 0,
-    intelNote: "",
-    intelImpact: 0,
-    adpChange: null,
-    adpTrend: "",
+    ecrRank: o.ecrRank ?? null,
+    ecrTier: o.ecrTier ?? null,
     vor: o.vor ?? null,
-    vorRank: null,
-    vorGap: null,
-  };
+  });
 }
 
-const board: Board = {
-  generatedAt: "t",
-  teams: 10,
-  threshold: 18,
-  positionFilter: null,
-  sourceLabel: "ESPN",
-  expertLabel: "ECR",
-  rows: [
+const board: Board = makeBoard(
+  [
     row("gibbs", "RB", { adp: 1.5, vor: 120, ecrRank: 1, ecrTier: 1 }),
     row("bijan", "RB", { adp: 2.4, vor: 110, ecrRank: 2, ecrTier: 1 }),
     row("chase", "WR", { adp: 3.1, vor: 105, ecrRank: 3 }),
     row("nabers", "WR", { adp: 6.0, vor: 95 }),
   ],
-  disagreements: 0,
-  verdict: "",
-  blended: false,
-  intelAsOf: "",
-};
+  { generatedAt: "t" },
+);
 
 function pick(overall: number, teamId: number, playerId: string): DraftPick {
   return { overall, round: Math.ceil(overall / 10), pickInRound: ((overall - 1) % 10) + 1, teamId, playerId, keeper: false };
