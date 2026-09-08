@@ -59,6 +59,8 @@ export interface SleeperConfig {
   /** Explicit SLEEPER_USER_ID, or null to resolve lazily from `username`. */
   userId: string | null;
   username: string | null;
+  /** SLEEPER_TOKEN — bearer token from a logged-in session; writes only. */
+  token: string | null;
   season: number;
   baseUrl: string;
 }
@@ -113,12 +115,14 @@ function loadSleeperConfig(): SleeperConfig {
   }
   const userId = process.env.SLEEPER_USER_ID?.trim() || null;
   const username = process.env.SLEEPER_USERNAME?.trim() || null;
+  const token = process.env.SLEEPER_TOKEN?.trim() || null;
   const season = optionalInt("SLEEPER_SEASON") ?? new Date().getFullYear();
   return {
     leagueId,
     draftId,
     userId,
     username,
+    token,
     season,
     baseUrl: "https://api.sleeper.app/v1",
   };

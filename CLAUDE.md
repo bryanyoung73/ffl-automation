@@ -52,8 +52,10 @@ source for every command. All implement `LeagueProvider`
   (`sleeper/projections.ts`, `api.sleeper.com`) → VOR, parity with the ESPN
   board). `getRoster` / `getFreeAgents` also work (needs `SLEEPER_LEAGUE_ID`,
   not a mock): rosters from `/league/<id>/rosters` + weekly/season projections
-  + season stats + trending-add buzz. `applyLineup` throws `NOT_SUPPORTED`
-  (phase 4 — needs a token). Pure mappers in `maps.ts`. Config:
+  + season stats + trending-add buzz. `applyLineup` posts the
+  `roster_update_starters` GraphQL mutation to `api.sleeper.app/graphql` with
+  `Authorization: Bearer $SLEEPER_TOKEN` (a logged-in-session token, writes
+  only) — **unverified against a live submit**, `--dry-run` first. Pure mappers in `maps.ts`. Config:
   `SLEEPER_LEAGUE_ID` **or** `SLEEPER_DRAFT_ID` (a mock draft has no league —
   settings then come from the draft's own `slots_*`), plus `SLEEPER_USERNAME`
   (all public). See `docs/specs/2026-09-08-sleeper-provider.md`.
@@ -126,10 +128,10 @@ src/
     espn/client.ts          fetch wrapper: cookies, x-fantasy-filter, errors
     espn/maps.ts            PURE: id<->code maps, scoring + projection helpers
     espn/EspnLeague.ts      provider impl + exported pure mappers
-    sleeper/client.ts       fetch wrapper: no auth, GET memo, noCache
+    sleeper/client.ts       fetch wrapper: no-auth GET (memo, noCache) + graphql() (Bearer, writes)
     sleeper/maps.ts         PURE: slot map, scoring, settings/draft/pick mappers
     sleeper/projections.ts  PURE parse + fetch: api.sleeper.com season/weekly proj + stats
-    sleeper/SleeperLeague.ts provider impl: draft + roster + free agents (no writes)
+    sleeper/SleeperLeague.ts provider impl: draft + roster + free agents + lineup write
   browser.ts           browser context from saved storageState (Yahoo only)
   pages/
     TeamPage.ts             login-state checks, output/ debug dumps

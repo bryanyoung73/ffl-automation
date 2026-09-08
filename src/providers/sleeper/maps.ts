@@ -1,7 +1,7 @@
 import type { LeagueSettings, Position, SlotCode } from "../../draft/types.js";
 import { POSITIONS } from "../../draft/types.js";
 import type { BoardEntry } from "../../draft/board.js";
-import type { Player, PlayerStatus } from "../../lineup/types.js";
+import type { LineupPlan, Player, PlayerStatus } from "../../lineup/types.js";
 import type { FreeAgent } from "../../waivers/types.js";
 import type { DraftPick, DraftState } from "../types.js";
 import { teamCode } from "../../nfl/names.js";
@@ -353,6 +353,15 @@ export function mapRoster(
         pointsSoFar: pts.actual.get(pid) ?? 0,
       };
     });
+}
+
+/**
+ * Ordered starter player ids for the `roster_update_starters` mutation —
+ * positionally aligned with the league's starting slots (the optimizer expands
+ * them in `roster_positions` order). An unfilled slot is `"0"`.
+ */
+export function buildStarters(plan: LineupPlan): string[] {
+  return plan.assignments.map((a) => a.player?.id ?? "0");
 }
 
 /** A dump player + Sleeper stats → `FreeAgent`. `trend` is the 24h add count

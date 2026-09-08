@@ -28,6 +28,46 @@ export class SleeperClient {
     return p;
   }
 
+  /**
+   * POST a GraphQL operation to Sleeper's authenticated endpoint (writes).
+   * Needs `SLEEPER_TOKEN` — a bearer token from a logged-in sleeper.com session.
+   */
+  async graphql<T>(query: string, variables: Record<string, unknown>): Promise<T> {
+    if (!this.cfg.token) {
+      throw new Error(
+        "SLEEPER_TOKEN is not set — required for writes. Copy it from a logged-in " +
+          "sleeper.com session: DevTools → Application → Local Storage → `token`, " +
+          "or the `authorization` header on any graphql request.",
+      );
+    }
+    const res = await fetch("https://api.sleeper.app/graphql", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.cfg.token}`,
+      },
+      body: JSON.stringify({ query, variables }),
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        throw new Error(`Sleeper graphql -> ${res.status}. SLEEPER_TOKEN is stale — grab a fresh one.`);
+      }
+      throw new Error(`Sleeper graphql -> ${res.status}.\n${text.slice(0, 300)}`);
+    }
+    let json: { data?: T; errors?: Array<{ message?: string }> };
+    try {
+      json = JSON.parse(text);
+    } catch {
+      throw new Error(`Sleeper graphql: response was not JSON.\n${text.slice(0, 200)}`);
+    }
+    if (json.errors?.length) {
+      throw new Error(`Sleeper graphql: ${json.errors.map((e) => e.message ?? "?").join("; ")}`);
+    }
+    if (json.data === undefined) throw new Error("Sleeper graphql: empty response.");
+    return json.data;
+  }
+
   private async parse<T>(res: Response, path: string): Promise<T> {
     const text = await res.text();
     // Sleeper's error bodies are unhelpful ("null", ""), so only surface a

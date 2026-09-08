@@ -9,6 +9,7 @@ import {
   eligibleSlotsFor,
   mapRoster,
   mapFreeAgent,
+  buildStarters,
   type SleeperDraftRaw,
   type SleeperLeagueRaw,
   type SleeperPickRaw,
@@ -192,6 +193,21 @@ test("mapRoster: starter slots align with roster_positions, reserve is IR, rest 
   expect(by("ir1").currentSlot).toBe("IR");
   expect(by("rb1")).toMatchObject({ projectedPoints: 14.2, seasonProjectedPoints: 240, pointsSoFar: 60, status: "Q" });
   expect(by("rb1").eligibleSlots).toEqual(["RB", "W/R/T", "OP"]);
+});
+
+test("buildStarters is the assignment player ids in slot order, '0' for an empty slot", () => {
+  const p = (id: string) => ({ id, name: id, team: "KC", position: "RB", eligibleSlots: [], projectedPoints: 0, status: "OK" as const, currentSlot: "BN" });
+  const plan = {
+    assignments: [
+      { slot: { code: "QB", index: 0 }, player: p("qb1") },
+      { slot: { code: "RB", index: 0 }, player: p("rb1") },
+      { slot: { code: "RB", index: 1 }, player: null },
+      { slot: { code: "K", index: 0 }, player: p("k1") },
+    ],
+    bench: [],
+    totalProjected: 0,
+  };
+  expect(buildStarters(plan)).toEqual(["qb1", "rb1", "0", "k1"]);
 });
 
 test("mapFreeAgent fills projections and turns a trend count into buzz", () => {

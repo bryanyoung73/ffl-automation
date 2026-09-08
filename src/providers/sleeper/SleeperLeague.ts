@@ -6,6 +6,7 @@ import type { LineupPlan } from "../../lineup/types.js";
 import type { DraftState, LeagueProvider, RosterReadResult } from "../types.js";
 import { SleeperClient } from "./client.js";
 import {
+  buildStarters,
   detectScoring,
   mapDraftState,
   mapFreeAgent,
@@ -40,6 +41,7 @@ export class SleeperLeague implements LeagueProvider {
   private readonly cacheDir: string;
   private resolvedUserId: string | null;
   private draftIdCache: string | undefined;
+  private myRosterIdCache: number | undefined;
 
   constructor(config: Config) {
     if (!config.sleeper) {
@@ -97,18 +99,12 @@ export class SleeperLeague implements LeagueProvider {
 
   async getRoster(week?: number): Promise<RosterReadResult> {
     const leagueId = this.requireLeague("Roster reads");
-    const [league, rosters, uid, dump, wk] = await Promise.all([
+    const [league, mine, dump, wk] = await Promise.all([
       this.league(),
-      this.client.get<SleeperRosterRaw[]>(`league/${leagueId}/rosters`),
-      this.userId(),
+      this.myRoster(leagueId),
       loadSleeperPlayers(this.cacheDir),
       week != null ? Promise.resolve(week) : this.currentWeek(),
     ]);
-    if (!uid) {
-      throw new Error("Set SLEEPER_USERNAME (or SLEEPER_USER_ID) so I know which roster is yours.");
-    }
-    const mine = rosters.find((r) => r.owner_id === uid);
-    if (!mine) throw new Error(`No Sleeper roster owned by ${uid} in league ${leagueId}.`);
 
     const scoring = detectScoring(league.scoring_settings);
     const positions = league.roster_positions ?? [];
@@ -157,8 +153,29 @@ export class SleeperLeague implements LeagueProvider {
     return fas.slice(0, 250);
   }
 
-  applyLineup(_plan: LineupPlan, _opts: { dryRun: boolean }): Promise<void> {
-    throw notSupported("Lineup writes");
+  async applyLineup(plan: LineupPlan, opts: { dryRun: boolean }): Promise<void> {
+    const leagueId = this.requireLeague("Lineup writes");
+    const starters = buildStarters(plan);
+
+    if (opts.dryRun) {
+      console.log(`  [dry-run] would set starters (${starters.length}): ${starters.join(", ")}`);
+      return;
+    }
+
+    const rosterId = this.myRosterIdCache ?? (await this.myRoster(leagueId)).roster_id;
+    if (rosterId == null) throw new Error("Could not resolve my Sleeper roster_id.");
+
+    // Sleeper's authenticated GraphQL — the same mutation the web app uses to
+    // save a lineup. `starters` is a JSON-encoded array of player ids. UNVERIFIED
+    // against a live submit (needs a token); eyeball a --dry-run first.
+    await this.client.graphql(
+      `mutation SetStarters($league_id: Snowflake, $roster_id: Int, $starters: String) {
+         roster_update_starters(league_id: $league_id, roster_id: $roster_id, starters: $starters) {
+           roster_id
+         }
+       }`,
+      { league_id: leagueId, roster_id: rosterId, starters: JSON.stringify(starters) },
+    );
   }
 
   async close(): Promise<void> {
@@ -192,6 +209,21 @@ export class SleeperLeague implements LeagueProvider {
       fetchSleeperSeasonStats(this.cacheDir, this.cfg.season, scoring),
     ]);
     return { week: wk, season, actual };
+  }
+
+  /** My roster in the league, found by `owner_id`. */
+  private async myRoster(leagueId: string): Promise<SleeperRosterRaw> {
+    const [rosters, uid] = await Promise.all([
+      this.client.get<SleeperRosterRaw[]>(`league/${leagueId}/rosters`),
+      this.userId(),
+    ]);
+    if (!uid) {
+      throw new Error("Set SLEEPER_USERNAME (or SLEEPER_USER_ID) so I know which roster is yours.");
+    }
+    const mine = rosters.find((r) => r.owner_id === uid);
+    if (!mine) throw new Error(`No Sleeper roster owned by ${uid} in league ${leagueId}.`);
+    if (mine.roster_id != null) this.myRosterIdCache = mine.roster_id;
+    return mine;
   }
 
   private async userId(): Promise<string | null> {
@@ -229,11 +261,4 @@ export class SleeperLeague implements LeagueProvider {
   private async draft(): Promise<SleeperDraftRaw> {
     return this.client.get<SleeperDraftRaw>(`draft/${await this.draftId()}`);
   }
-}
-
-function notSupported(what: string): Error {
-  return new Error(
-    `${what} on Sleeper is not built yet (phase 3+). Use PROVIDER=espn for that, ` +
-      `or see docs/specs/2026-09-08-sleeper-provider.md.`,
-  );
 }

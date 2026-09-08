@@ -340,8 +340,34 @@ draft has no roster and throws with that message).
 `tests/sleeper-maps.spec.ts` +4. Typecheck clean, 184 unit tests pass. Verified
 live against a real Sleeper league: `npm run roster` renders the full table
 with correct slots + weekly/season/actual points; `npm run waivers` produces
-ranked add/drop pairs. Only phase 4 (`applyLineup` writes, needs a token)
-remains.
+ranked add/drop pairs.
+
+## Addendum — Phase 4 shipped (2026-09-08)
+
+`applyLineup` on Sleeper — the lineup *write*.
+
+- GraphQL introspection (`__schema.mutation_type`, snake-cased) named the
+  mutation: **`roster_update_starters(league_id: Snowflake, roster_id: Int,
+  starters: String)`** — `starters` is a JSON-encoded array of player ids
+  positionally aligned with the league's starting slots.
+- `SleeperConfig.token` ← `SLEEPER_TOKEN` (bearer from a logged-in session,
+  writes only; reads never need it). `SleeperClient.graphql(query, vars)` posts
+  to `api.sleeper.app/graphql` with `Authorization: Bearer`, unwraps
+  `data`/`errors`, friendly 401/403.
+- `maps.ts` `buildStarters(plan)` (pure) = `assignments.map(a => a.player?.id ??
+  "0")`. `SleeperLeague.applyLineup` builds it, resolves `roster_id` (shared
+  `myRoster()` with `getRoster`), and fires the mutation. `--dry-run` prints
+  the payload and returns.
+- `set-lineup.ts` is already provider-agnostic (`Submit these changes to
+  Sleeper?`). Also: `process.exit(1)` → `process.exitCode` in the roster /
+  waivers / lineup CLIs (the Windows/tsx mid-fetch libuv abort).
+- `tests/sleeper-maps.spec.ts` +1. 185 unit tests pass.
+
+**Not verified** — the real submit needs a `SLEEPER_TOKEN` and a live lineup
+change. Same status as ESPN's `POST transactions/`: implemented, `--dry-run`
+works end-to-end (verified live), the mutation itself is best-effort from
+introspection. Eyeball a `--dry-run` and confirm the first real submit lands in
+the Sleeper app.
 
 ## Open items / risks
 
