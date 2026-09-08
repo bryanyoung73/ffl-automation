@@ -61,6 +61,18 @@ export interface Rec {
   survival: Survival;
   /** The ranking number: need-weighted value + survival/cliff/run bumps. */
   score: number;
+  /** Value over next available: VOR you'd give up at this position by passing
+   *  now and taking your realistic next-best at your next pick. null when
+   *  unknowable (no VOR, no next pick, or nobody at the position likely lasts).
+   *  Display-only — not folded into `score`. */
+  vona: number | null;
+  /** The player `vona` is measured against. */
+  vonaNext: string | null;
+  /** Best-case expert rank (ceiling) / worst-case (floor) / rank std dev
+   *  (boom-bust spread), from FantasyPros. null when not ECR-matched. */
+  ceilRank: number | null;
+  floorRank: number | null;
+  rankStd: number | null;
   /** 1–3 short clauses, most important first. */
   reasons: string[];
 }

@@ -8,7 +8,7 @@ const HTML = `
 <script>
 var somethingElse = {"a":1};
 var ecrData = {"sport":"NFL","type":"Draft PPR","players":[
-  {"player_id":1,"player_name":"Ja'Marr Chase","player_team_id":"CIN","player_position_id":"WR","rank_ecr":1,"pos_rank":"WR1","tier":1,"player_ecr_delta":null},
+  {"player_id":1,"player_name":"Ja'Marr Chase","player_team_id":"CIN","player_position_id":"WR","rank_ecr":1,"pos_rank":"WR1","tier":1,"player_ecr_delta":null,"rank_min":"1","rank_max":"6","rank_std":"0.98"},
   {"player_id":2,"player_name":"Bijan Robinson Jr.","player_team_id":"ATL","player_position_id":"RB","rank_ecr":2,"pos_rank":"RB1","tier":1,"player_ecr_delta":-3},
   {"player_id":3,"player_name":"Broken","player_team_id":"","player_position_id":"WR","rank_ecr":null,"pos_rank":"","tier":0}
 ]};
@@ -18,8 +18,8 @@ var ecrData = {"sport":"NFL","type":"Draft PPR","players":[
 test("parseEcrHtml extracts the ecrData players array", () => {
   const rows = parseEcrHtml(HTML);
   expect(rows).toHaveLength(2); // "Broken" (no rank) dropped
-  expect(rows[0]).toMatchObject({ name: "Ja'Marr Chase", team: "CIN", position: "WR", ecrRank: 1, posRank: "WR1", tier: 1 });
-  expect(rows[1]).toMatchObject({ name: "Bijan Robinson Jr.", ecrRank: 2, delta: -3 });
+  expect(rows[0]).toMatchObject({ name: "Ja'Marr Chase", team: "CIN", position: "WR", ecrRank: 1, posRank: "WR1", tier: 1, rankMin: 1, rankMax: 6, rankStd: 0.98 });
+  expect(rows[1]).toMatchObject({ name: "Bijan Robinson Jr.", ecrRank: 2, delta: -3, rankMin: null, rankMax: null, rankStd: null });
 });
 
 test("parseEcrHtml returns [] on a page with no ecrData", () => {

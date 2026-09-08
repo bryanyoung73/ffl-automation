@@ -5,6 +5,7 @@ import { mySlots, nextPick, picksUntilNext } from "./snake.js";
 import { myRoster, rosterNeeds } from "./needs.js";
 import { tierCliffs, positionRuns } from "./context.js";
 import { willLast, type Survival, type SurvivalBucket } from "./survival.js";
+import { computeVona } from "./vona.js";
 import type { Cliff, DraftAdvice, PositionNeed, Rec, RosterSlotView, Run } from "./types.js";
 
 const DEFAULT_TOP = 6;
@@ -114,17 +115,25 @@ export function computeAdvice(input: AdviceInput): DraftAdvice {
   });
   scored.sort((a, b) => b.score - a.score);
 
-  const recommendations: Rec[] = scored.slice(0, top).map(({ row, need, surv, score, cliff, run }) => ({
-    player: row.player,
-    adp: row.adp,
-    vor: row.vor,
-    vorRank: row.vorRank,
-    ecrPosRank: row.ecrPosRank,
-    needWeight: need.weight,
-    survival: surv,
-    score: round1(score),
-    reasons: buildReasons(row, need, surv, myNextOverall, cliff, run),
-  }));
+  const recommendations: Rec[] = scored.slice(0, top).map(({ row, need, surv, score, cliff, run }) => {
+    const vona = computeVona(row, available, myNextOverall);
+    return {
+      player: row.player,
+      adp: row.adp,
+      vor: row.vor,
+      vorRank: row.vorRank,
+      ecrPosRank: row.ecrPosRank,
+      needWeight: need.weight,
+      survival: surv,
+      score: round1(score),
+      vona: vona?.gap ?? null,
+      vonaNext: vona?.nextName ?? null,
+      ceilRank: row.ecrRankMin,
+      floorRank: row.ecrRankMax,
+      rankStd: row.ecrRankStd,
+      reasons: buildReasons(row, need, surv, myNextOverall, cliff, run),
+    };
+  });
 
   return { ...shell, recommendations, cliffs, runs };
 }

@@ -25,6 +25,10 @@ export interface BoardEntry {
   ecrPosRank?: string | null;
   /** ECR tier. */
   ecrTier?: number | null;
+  /** Best / worst-case expert rank and the rank std dev (boom-bust spread). */
+  ecrRankMin?: number | null;
+  ecrRankMax?: number | null;
+  ecrRankStd?: number | null;
   /** Season projected fantasy points — feeds VOR when `leagueSettings` is passed. */
   projectedPoints?: number | null;
 }
@@ -52,6 +56,10 @@ export interface BoardRow {
   ecrRank: number | null;
   ecrPosRank: string | null;
   ecrTier: number | null;
+  /** Expert rank ceiling / floor / spread (std dev), when matched. */
+  ecrRankMin: number | null;
+  ecrRankMax: number | null;
+  ecrRankStd: number | null;
   /** Snake round bucket: ceil(rank / teams). */
   tier: number;
   note: "" | "yahoo-hot" | "yahoo-cold";
@@ -227,6 +235,9 @@ export function buildBoard(entries: readonly BoardEntry[], options: BuildBoardOp
       ecrRank: e.ecrRank ?? null,
       ecrPosRank: e.ecrPosRank ?? null,
       ecrTier: e.ecrTier ?? null,
+      ecrRankMin: e.ecrRankMin ?? null,
+      ecrRankMax: e.ecrRankMax ?? null,
+      ecrRankStd: e.ecrRankStd ?? null,
       tier: Math.ceil(rank / teams),
       note,
       adpRank,

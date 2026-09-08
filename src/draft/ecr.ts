@@ -23,6 +23,12 @@ export interface EcrEntry {
   tier: number;
   /** Rank movement since the last update (negative = rising). */
   delta: number | null;
+  /** Best-case expert rank (rank ceiling). */
+  rankMin: number | null;
+  /** Worst-case expert rank (rank floor). */
+  rankMax: number | null;
+  /** Std dev of the expert ranks — low = tight consensus, high = boom/bust. */
+  rankStd: number | null;
 }
 
 interface RawEcrPlayer {
@@ -33,6 +39,15 @@ interface RawEcrPlayer {
   pos_rank?: string;
   tier?: number;
   player_ecr_delta?: number | null;
+  rank_min?: string | number;
+  rank_max?: string | number;
+  rank_std?: string | number;
+}
+
+function num(v: string | number | undefined | null): number | null {
+  if (v == null || v === "") return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
 }
 
 const PAGE_BY_SCORING: Record<LeagueSettings["scoring"], string> = {
@@ -65,6 +80,9 @@ export function parseEcrHtml(html: string): EcrEntry[] {
       posRank: (p.pos_rank ?? "").toUpperCase(),
       tier: Number(p.tier) || 0,
       delta: typeof p.player_ecr_delta === "number" ? p.player_ecr_delta : null,
+      rankMin: num(p.rank_min),
+      rankMax: num(p.rank_max),
+      rankStd: num(p.rank_std),
     });
   }
   return out;
@@ -97,6 +115,9 @@ export function attachEcr(
       ecrRank: hit.ecrRank,
       ecrPosRank: hit.posRank,
       ecrTier: hit.tier,
+      ecrRankMin: hit.rankMin,
+      ecrRankMax: hit.rankMax,
+      ecrRankStd: hit.rankStd,
     };
   });
   return { entries: out, matched };

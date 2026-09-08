@@ -64,6 +64,10 @@ export interface RecSnapshot {
   adp: number | null;
   survivalProb: number | null;
   survivalBucket: SurvivalBucket;
+  vona: number | null;
+  ceilRank: number | null;
+  floorRank: number | null;
+  rankStd: number | null;
 }
 
 export interface AdviceSnapshot {
@@ -220,6 +224,10 @@ function snapshotAdvice(a: DraftAdvice): AdviceSnapshot {
       adp: r.adp,
       survivalProb: r.survival.prob,
       survivalBucket: r.survival.bucket,
+      vona: r.vona,
+      ceilRank: r.ceilRank,
+      floorRank: r.floorRank,
+      rankStd: r.rankStd,
     })),
     cliffs: a.cliffs,
     runs: a.runs,

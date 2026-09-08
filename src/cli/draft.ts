@@ -153,7 +153,7 @@ function render(a: DraftAdvice, opts: { clear: boolean; intelAsOf: string }): vo
   }
 
   if (a.recommendations.length) {
-    console.log("\nPick now");
+    console.log("\nPick now   (wait N = VOR lost at this position if you pass now)");
     a.recommendations.forEach((rec, i) => printRec(rec, i + 1));
   }
 
@@ -178,11 +178,19 @@ function render(a: DraftAdvice, opts: { clear: boolean; intelAsOf: string }): vo
 function printRec(rec: Rec, n: number): void {
   const adp = rec.adp != null ? `ADP ${Math.round(rec.adp)}` : "";
   const vor = rec.vor != null ? `VOR ${rec.vor >= 0 ? "+" : ""}${rec.vor}` : "";
+  const vona = rec.vona != null && rec.vona > 0 ? `wait ${rec.vona}` : "";
   console.log(
     `  ${String(n)}. ${rec.player.name.padEnd(22)} ${rec.player.position.padEnd(3)} ` +
-      `${rec.player.team.padEnd(4)} ${adp.padEnd(8)} ${vor.padEnd(10)}`,
+      `${rec.player.team.padEnd(4)} ${adp.padEnd(8)} ${vor.padEnd(10)} ${vona.padEnd(9)}`,
   );
-  console.log(`     ${rec.reasons.join("  -  ")}`);
+  const volatile = rec.rankStd != null && rec.rankStd >= 6;
+  const range =
+    rec.ceilRank != null && rec.floorRank != null
+      ? `  ·  ceil/floor ${rec.ceilRank}-${rec.floorRank}` +
+        `${rec.rankStd != null ? ` (σ${rec.rankStd})` : ""}${volatile ? " BOOM/BUST" : ""}`
+      : "";
+  const tail = rec.vona != null && rec.vona > 0 && rec.vonaNext ? `  (vs ${rec.vonaNext} next pick)` : "";
+  console.log(`     ${rec.reasons.join("  -  ")}${range}${tail}`);
 }
 
 /* ------------------------------------------------------------------ utils --- */

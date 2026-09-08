@@ -27,6 +27,9 @@ function row(id: string, position: Position, o: { adp?: number; vor?: number; ec
     ecrRank: o.ecrRank ?? null,
     ecrPosRank: null,
     ecrTier: o.ecrTier ?? null,
+    ecrRankMin: null,
+    ecrRankMax: null,
+    ecrRankStd: null,
     tier: 1,
     note: "",
     adpRank: 1,
@@ -86,6 +89,11 @@ const advice: DraftAdvice = {
       needWeight: 3.4,
       survival: { prob: 0.12, bucket: "gone" },
       score: 361.2,
+      vona: 18.5,
+      vonaNext: "GARRETT WILSON",
+      ceilRank: 2,
+      floorRank: 9,
+      rankStd: 1.8,
       reasons: ["fills your 1st WR slot", "won't last to 5 (ADP 3)"],
     },
   ],
@@ -162,6 +170,10 @@ test("buildEvent trims the advice to a snapshot", () => {
     adp: 3.1,
     survivalProb: 0.12,
     survivalBucket: "gone",
+    vona: 18.5,
+    ceilRank: 2,
+    floorRank: 9,
+    rankStd: 1.8,
   });
   expect(ev.advice.cliffs).toHaveLength(1);
   expect("reasons" in rec).toBe(false);

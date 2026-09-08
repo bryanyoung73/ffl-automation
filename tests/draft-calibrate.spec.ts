@@ -51,7 +51,7 @@ function landed(p: Partial<LandedPick> & { overall: number }): LandedPick {
 }
 
 function snap(playerId: string, prob: number | null, bucket: SurvivalBucket): RecSnapshot {
-  return { playerId, name: playerId, position: "RB", score: 100, adp: null, survivalProb: prob, survivalBucket: bucket };
+  return { playerId, name: playerId, position: "RB", score: 100, adp: null, survivalProb: prob, survivalBucket: bucket, vona: null, ceilRank: null, floorRank: null, rankStd: null };
 }
 
 function ev(picks: LandedPick[], advice: Partial<AdviceSnapshot> = {}): DraftLogEvent {
