@@ -14,6 +14,7 @@ import {
   type SleeperPickRaw,
 } from "./maps.js";
 import { attachAdp, fetchAdp } from "../../draft/adp.js";
+import { fetchSleeperProjections } from "./projections.js";
 import { loadSleeperPlayers } from "../../intel/match.js";
 
 /**
@@ -66,13 +67,20 @@ export class SleeperLeague implements LeagueProvider {
     const teams = settings.teams || 10;
 
     const universe = playerUniverse(dump);
-    const adp = await fetchAdp(this.cacheDir, scoring, teams, this.cfg.season);
+    const [adp, proj] = await Promise.all([
+      fetchAdp(this.cacheDir, scoring, teams, this.cfg.season),
+      fetchSleeperProjections(this.cacheDir, this.cfg.season, scoring),
+    ]);
     const { entries } = attachAdp(universe, adp);
 
     return entries
       .filter((e) => e.adp != null)
       .sort((a, b) => (a.adp ?? 9999) - (b.adp ?? 9999))
-      .map((e, i) => ({ ...e, listRank: i + 1 }));
+      .map((e, i) => ({
+        ...e,
+        listRank: i + 1,
+        projectedPoints: proj.get(e.player.id) ?? null,
+      }));
   }
 
   getRoster(): Promise<RosterReadResult> {

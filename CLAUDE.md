@@ -48,8 +48,10 @@ source for every command. All implement `LeagueProvider`
   `getDraftState` (live picks + my slot, which Sleeper assigns up front), and an
   ADP-ordered `getDraftBoard` (player pool from the `/players/nfl` dump +
   `src/draft/adp.ts` FantasyFootballCalculator ADP, which also brings
-  `high`/`low`/`stdev`). `getRoster` / `getFreeAgents` / `applyLineup` throw
-  `NOT_SUPPORTED` (phases 3–4). Pure mappers in `maps.ts`. Config:
+  `high`/`low`/`stdev`, + Sleeper's own season projections
+  (`sleeper/projections.ts`, `api.sleeper.com`) → VOR, parity with the ESPN
+  board). `getRoster` / `getFreeAgents` / `applyLineup` throw `NOT_SUPPORTED`
+  (phases 3–4). Pure mappers in `maps.ts`. Config:
   `SLEEPER_LEAGUE_ID` **or** `SLEEPER_DRAFT_ID` (a mock draft has no league —
   settings then come from the draft's own `slots_*`), plus `SLEEPER_USERNAME`
   (all public). See `docs/specs/2026-09-08-sleeper-provider.md`.
@@ -124,6 +126,7 @@ src/
     espn/EspnLeague.ts      provider impl + exported pure mappers
     sleeper/client.ts       fetch wrapper: no auth, GET memo, noCache
     sleeper/maps.ts         PURE: slot map, scoring, settings/draft/pick mappers
+    sleeper/projections.ts  PURE parse + fetch: api.sleeper.com season projections -> VOR
     sleeper/SleeperLeague.ts provider impl (draft only in v1)
   browser.ts           browser context from saved storageState (Yahoo only)
   pages/

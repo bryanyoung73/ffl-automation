@@ -291,6 +291,30 @@ bench` from the draft's slots; `getDraftState` → 120 picks mapped;
 `slot_to_roster_id`, and `npm run draft --once` rendered that user's real
 roster. 175 unit tests pass.
 
+## Addendum — Phase 2 shipped (2026-09-08)
+
+VOR on Sleeper boards — **from Sleeper's own projections API, not a FantasyPros
+scrape** (a strict improvement: no HTML, exact id join, scoring-matched).
+
+- `src/providers/sleeper/projections.ts` — `parseProjections(raw, scoring)`
+  (pure) reads `stats.pts_ppr` / `pts_half_ppr` / `pts_std` keyed by
+  `player_id`; `fetchSleeperProjections(cacheDir, season, scoring)` hits
+  `api.sleeper.com/projections/nfl/<season>?season_type=regular&position[]=…`
+  (note `.com`, separate host, no `/v1`), 12h cache, one fetch serves all
+  scorings.
+- `SleeperLeague.getDraftBoard` fetches ADP + projections in parallel and sets
+  `BoardEntry.projectedPoints`; `assembleBoard` already passes
+  `leagueSettings`, so `buildBoard` computes VOR unchanged.
+- `tests/sleeper-projections.spec.ts` (3). Typecheck clean, 180 unit tests
+  pass.
+
+Verified live: `PROVIDER=sleeper npm run cheatsheet` → "season projections
+present — VOR enabled", Gibbs VOR 160.4 (#1) / Bijan 153.9 (#2), the VOR-vs-ADP
+summary populates. The draft assistant's `wait N` (VONA) and point-based tier
+cliffs now work on Sleeper — full parity with the ESPN board.
+
+Phases 3 (roster/waivers) and 4 (writes) remain.
+
 ## Open items / risks
 
 - ~~**FantasyPros ADP page structure**~~ — resolved by recon (2026-09-08). The
