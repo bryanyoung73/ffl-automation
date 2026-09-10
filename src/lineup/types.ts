@@ -32,6 +32,10 @@ export interface Player {
   seasonProjectedPoints?: number;
   /** Fantasy points scored so far this season, when available (ESPN). Waiver-wire. */
   pointsSoFar?: number;
+  /** His game has started — the slot can't change. The optimizer pins these
+   *  (a locked player is an immovable constraint, like a bye), so no proposed
+   *  move touches him and the submit isn't rejected. ESPN only for now. */
+  locked?: boolean;
 }
 
 /** What a provider returns from a roster read: the players plus the current

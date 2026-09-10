@@ -52,6 +52,8 @@ interface PlayerPoolEntry {
   player?: EspnPlayer;
   onTeamId?: number;
   status?: string;
+  /** Player's game has started — his lineup slot can no longer change. */
+  lineupLocked?: boolean;
 }
 
 interface RosterEntry {
@@ -155,6 +157,7 @@ export function mapRosterEntry(entry: RosterEntry, week: number, season?: number
     currentSlot: slotCode(entry.lineupSlotId),
     seasonProjectedPoints: seasonProjectedPoints(p.stats, season),
     pointsSoFar: season != null ? actualSeasonPoints(p.stats, season) : 0,
+    locked: entry.playerPoolEntry?.lineupLocked === true,
   };
 }
 

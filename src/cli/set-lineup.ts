@@ -35,6 +35,16 @@ async function main(): Promise<void> {
       force: hasFlag("refresh"),
       llm: hasFlag("llm"),
     });
+
+    // A locked player (game already started) can't move — pin him so the
+    // optimizer works around him instead of proposing a change the provider
+    // will reject.
+    const lockedIds = players.filter((p) => p.locked).map((p) => p.id);
+    if (lockedIds.length) {
+      const names = players.filter((p) => p.locked).map((p) => p.name).join(", ");
+      console.log(`Locked (game started, held in place): ${names}`);
+      for (const id of lockedIds) if (!pinnedPlayerIds.includes(id)) pinnedPlayerIds.push(id);
+    }
     if (!skipped) {
       const lines = formatAdjustments(adjustments);
       console.log(`Intel as of ${fetchedAt || "(unknown)"}:`);

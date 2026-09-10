@@ -33,7 +33,7 @@ async function main(): Promise<void> {
         Pos: p.position,
         Team: p.team,
         Proj: p.projectedPoints.toFixed(1),
-        Status: p.status === "OK" ? "" : p.status,
+        Status: p.locked ? "LOCK" : p.status === "OK" ? "" : p.status,
       }));
 
     console.table(rows);

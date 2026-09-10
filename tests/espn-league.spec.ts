@@ -27,8 +27,8 @@ test("startingSlotCodes expands the configured starters, bench/IR excluded", () 
 });
 
 test("mapRosterEntry maps a starter with a weekly projection", () => {
-  const entry = raw.teams![0]!.roster!.entries![0]!;
-  const p = mapRosterEntry(entry, 1);
+  const entries = raw.teams![0]!.roster!.entries!;
+  const p = mapRosterEntry(entries[0]!, 1);
   expect(p).toMatchObject({
     id: "3139477",
     name: "Patrick Mahomes",
@@ -37,7 +37,10 @@ test("mapRosterEntry maps a starter with a weekly projection", () => {
     projectedPoints: 22.4,
     status: "OK",
     currentSlot: "QB",
+    locked: true, // playerPoolEntry.lineupLocked — his game has started
   });
+  // an entry without the flag is not locked
+  expect(mapRosterEntry(entries[1]!, 1).locked).toBe(false);
 });
 
 test("mapRosterEntry carries injury status and IR slot", () => {

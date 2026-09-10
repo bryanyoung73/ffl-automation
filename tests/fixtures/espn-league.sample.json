@@ -25,6 +25,7 @@
             "playerId": 3139477,
             "lineupSlotId": 0,
             "playerPoolEntry": {
+              "lineupLocked": true,
               "player": {
                 "id": 3139477,
                 "fullName": "Patrick Mahomes",

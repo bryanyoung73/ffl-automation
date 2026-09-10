@@ -39,7 +39,12 @@ source for every command. All implement `LeagueProvider`
   `.env` (copy from a logged-in browser). Id/scoring/projection mapping is in
   pure, unit-tested `maps.ts` + the exported mappers in `EspnLeague.ts`; the
   write path (`applyLineup` → `POST transactions/`) is unofficial, so
-  `--dry-run` first. See `docs/specs/2026-08-31-espn-api-provider.md`.
+  `--dry-run` first. **Exercised live 2026-09-10** — a `409 TRAN_LINEUP_LOCKED`
+  proved the endpoint / auth / payload are right; ESPN rejects the whole
+  transaction if any item touches a player whose game has started.
+  `mapRosterEntry` now reads `playerPoolEntry.lineupLocked` → `Player.locked`,
+  and `set-lineup` auto-pins locked players so no proposed move touches them.
+  See `docs/specs/2026-08-31-espn-api-provider.md`.
   Note (2026-09-07): `mDraftDetail` does **not** carry live picks during a
   clock-running draft — it stays a skeleton until the draft completes. So the
   live draft assistant only works on ESPN *after the fact*. Sleeper is the fix.
