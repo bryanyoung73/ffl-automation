@@ -58,17 +58,42 @@ export function optimizeLineup(
   const pinned = new Set(options.pinnedPlayerIds ?? []);
   const slots = expandSlots(startingSlotCodes);
 
+  // Pinning is an explicit override — most commonly a player whose game has
+  // already started (locked) and whose slot literally cannot change, whatever
+  // his medical status says. So a pinned player is in the pool even if his
+  // status would otherwise bar him from starting (e.g. he got hurt mid-game
+  // and is now "IR" but is still locked into the WR slot he kicked off in).
   const startable = [...players]
-    .filter((p) => !unstartable.has(p.status))
+    .filter((p) => pinned.has(p.id) || !unstartable.has(p.status))
     .sort((a, b) =>
       b.projectedPoints - a.projectedPoints ||
       a.name.localeCompare(b.name) ||
       a.id.localeCompare(b.id),
     );
 
-  // Candidate player indices per slot, best projection first.
-  const candidates: number[][] = slots.map((slot) =>
-    startable.map((_, i) => i).filter((i) => canFill(startable[i]!, slot.code)),
+  // Force-pin: if a pinned player currently starts in one of our slots, lock it.
+  const forced = new Map<number, number>(); // slotIdx -> player index
+  const forcedPlayers = new Set<number>();
+  slots.forEach((slot, slotIdx) => {
+    const i = startable.findIndex(
+      (p) => pinned.has(p.id) && p.currentSlot === slot.code,
+    );
+    if (i >= 0 && !forcedPlayers.has(i)) {
+      forced.set(slotIdx, i);
+      forcedPlayers.add(i);
+    }
+  });
+
+  // Candidate player indices per slot, best projection first. A pinned player
+  // is only ever a candidate for his forced slot — never poached into a
+  // different one — and a pinned player with no forced slot (e.g. pinned
+  // while sitting on the bench) is not a candidate anywhere: he's frozen off
+  // the field, not merely exempted from the status filter.
+  const candidates: number[][] = slots.map((slot, slotIdx) =>
+    startable.map((_, i) => i).filter((i) => {
+      if (pinned.has(startable[i]!.id)) return forced.get(slotIdx) === i;
+      return canFill(startable[i]!, slot.code);
+    }),
   );
 
   // Optimistic remaining value: for each not-yet-filled slot, the best
@@ -91,17 +116,6 @@ export function optimizeLineup(
 
   const used: boolean[] = startable.map(() => false);
   const pick: (number | null)[] = [];
-
-  // Force-pin: if a pinned player currently starts in one of our slots, lock it.
-  const forced = new Map<number, number>(); // slotIdx -> player index
-  slots.forEach((slot, slotIdx) => {
-    const i = startable.findIndex(
-      (p) => pinned.has(p.id) && p.currentSlot === slot.code,
-    );
-    if (i >= 0 && !Array.from(forced.values()).includes(i)) {
-      forced.set(slotIdx, i);
-    }
-  });
 
   function dfs(slotIdx: number, score: number): void {
     if (slotIdx === slots.length) {

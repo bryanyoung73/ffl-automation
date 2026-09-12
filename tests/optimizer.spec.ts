@@ -122,6 +122,31 @@ test("pinned starter is respected even when suboptimal", () => {
   expect(plan.assignments[0]?.player?.name).toBe("Sentimental");
 });
 
+test("a pinned player overrides the unstartable-status filter — a locked starter who got hurt mid-game stays put", () => {
+  // Real scenario: his game already started (locked), he then went to "IR"
+  // mid-game — status alone would normally bar him, but he can't be moved.
+  const players = [
+    player({ id: "locked", name: "Hurt Starter", position: "WR", projectedPoints: 14, status: "IR", currentSlot: "WR" }),
+    player({ id: "bench", name: "Bench Guy", position: "WR", projectedPoints: 13, currentSlot: "BN" }),
+  ];
+  const plan = optimizeLineup(players, ["WR"], { pinnedPlayerIds: ["locked"] });
+  expect(plan.assignments[0]?.player?.name).toBe("Hurt Starter");
+  expect(plan.bench.map((p) => p.name)).toContain("Bench Guy");
+});
+
+test("a pinned bench player is frozen off the field, not promoted into a starting slot", () => {
+  // Pinning only protects a player's *current* slot; a locked player who was
+  // already on the bench must not get poached into a starting slot just
+  // because he's now exempt from the status filter.
+  const players = [
+    player({ id: "lockedBench", name: "Locked Bench Guy", position: "WR", projectedPoints: 30, status: "IR", currentSlot: "BN" }),
+    player({ id: "starter", name: "Normal Starter", position: "WR", projectedPoints: 10, currentSlot: "WR" }),
+  ];
+  const plan = optimizeLineup(players, ["WR"], { pinnedPlayerIds: ["lockedBench"] });
+  expect(plan.assignments[0]?.player?.name).toBe("Normal Starter");
+  expect(plan.bench.map((p) => p.name)).toContain("Locked Bench Guy");
+});
+
 test("diffLineup reports only real moves and the projection swing", () => {
   const players = [
     player({ id: "a", name: "Starter A", position: "RB", projectedPoints: 10, currentSlot: "RB" }),

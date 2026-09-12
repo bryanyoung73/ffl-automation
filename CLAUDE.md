@@ -44,7 +44,12 @@ source for every command. All implement `LeagueProvider`
   transaction if any item touches a player whose game has started.
   `mapRosterEntry` now reads `playerPoolEntry.lineupLocked` → `Player.locked`,
   and `set-lineup` auto-pins locked players so no proposed move touches them.
-  See `docs/specs/2026-08-31-espn-api-provider.md`.
+  That pin was initially a no-op for a player who got hurt mid-game and
+  flipped to an unstartable status (e.g. "IR") while still locked in his
+  starting slot — `optimizeLineup`'s status filter ran before pinning and
+  excluded him outright. Fixed: pinning now overrides the unstartable filter
+  for that one player's own slot only (never lets a pinned bench player get
+  promoted elsewhere). See `docs/specs/2026-08-31-espn-api-provider.md`.
   Note (2026-09-07): `mDraftDetail` does **not** carry live picks during a
   clock-running draft — it stays a skeleton until the draft completes. So the
   live draft assistant only works on ESPN *after the fact*. Sleeper is the fix.
