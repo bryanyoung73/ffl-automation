@@ -147,6 +147,21 @@ test("a pinned bench player is frozen off the field, not promoted into a startin
   expect(plan.bench.map((p) => p.name)).toContain("Locked Bench Guy");
 });
 
+test("two pinned players sharing a slot code are each forced into their own slot", () => {
+  // Real scenario: two RB slots, both current starters locked (games started).
+  // The higher-projected one must not "claim" both slots and bench the other.
+  const players = [
+    player({ id: "rb1", name: "Locked RB One", position: "RB", projectedPoints: 22, currentSlot: "RB" }),
+    player({ id: "rb2", name: "Locked RB Two", position: "RB", projectedPoints: 17, currentSlot: "RB" }),
+    player({ id: "bench", name: "Bench RB", position: "RB", projectedPoints: 25, currentSlot: "BN" }),
+  ];
+  const plan = optimizeLineup(players, ["RB", "RB"], { pinnedPlayerIds: ["rb1", "rb2"] });
+  const names = plan.assignments.map((a) => a.player?.name);
+  expect(names).toContain("Locked RB One");
+  expect(names).toContain("Locked RB Two");
+  expect(plan.bench.map((p) => p.name)).toContain("Bench RB");
+});
+
 test("diffLineup reports only real moves and the projection swing", () => {
   const players = [
     player({ id: "a", name: "Starter A", position: "RB", projectedPoints: 10, currentSlot: "RB" }),

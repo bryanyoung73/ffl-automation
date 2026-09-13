@@ -72,13 +72,18 @@ export function optimizeLineup(
     );
 
   // Force-pin: if a pinned player currently starts in one of our slots, lock it.
+  // Multiple pinned players can share a slot code (two RB slots, two WR slots,
+  // ...), so the search for each slot must skip players already claimed by an
+  // earlier slot — otherwise every same-coded slot keeps re-matching the same
+  // (highest-projected) pinned player and the rest never get forced anywhere,
+  // which then makes them un-candidates everywhere and benches them.
   const forced = new Map<number, number>(); // slotIdx -> player index
   const forcedPlayers = new Set<number>();
   slots.forEach((slot, slotIdx) => {
     const i = startable.findIndex(
-      (p) => pinned.has(p.id) && p.currentSlot === slot.code,
+      (p, idx) => pinned.has(p.id) && p.currentSlot === slot.code && !forcedPlayers.has(idx),
     );
-    if (i >= 0 && !forcedPlayers.has(i)) {
+    if (i >= 0) {
       forced.set(slotIdx, i);
       forcedPlayers.add(i);
     }
