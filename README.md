@@ -154,6 +154,31 @@ That publishes `https://<machine>.<tailnet>.ts.net` — open it on your phone an
 "Add to Home Screen" installs it as an app icon. See
 `docs/specs/2026-09-14-web-dashboard.md` for details.
 
+### Running it in Docker (e.g. on a QNAP)
+
+`Dockerfile` + `docker-compose.yml` run the dashboard as two containers: `app`
+(this repo) and `tailscale` (the official `tailscale/tailscale` image), with
+`app` sharing `tailscale`'s network namespace so the dashboard gets its own
+tailnet identity + HTTPS with no port published on the NAS's LAN at all.
+
+1. Generate a **reusable, non-ephemeral** auth key: Tailscale admin console →
+   Settings → Keys → Generate auth key.
+2. Copy the project (or at minimum `Dockerfile`, `docker-compose.yml`,
+   `tailscale/`, `package*.json`, `tsconfig.json`, `src/`, `public/`,
+   `env.example`) onto the NAS, and put a real `.env` next to
+   `docker-compose.yml` — the same vars as local (`PROVIDER`, `ESPN_S2`, etc.),
+   plus `TS_AUTHKEY=tskey-...` from step 1. Never commit this file.
+3. On the NAS (Container Station's SSH/CLI, or any Docker host):
+   ```bash
+   docker compose up -d --build
+   ```
+4. `docker compose logs tailscale` shows the assigned MagicDNS name the first
+   time it authenticates. Browse to `https://ffl-dashboard.<tailnet>.ts.net`
+   from your phone and "Add to Home Screen."
+
+No manual `tailscale serve` step needed here — `tailscale/serve-config.json`
+declares it, so the sidecar applies it on every start.
+
 ## Layout
 
 ```
