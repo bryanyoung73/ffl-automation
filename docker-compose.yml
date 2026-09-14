@@ -26,9 +26,15 @@ services:
     network_mode: service:tailscale
     env_file:
       - .env
+    volumes:
+      # Intel/LLM-digest cache (.cache/) — without this, every restart or
+      # rebuild throws it away and the next page load re-runs the LLM digest
+      # for every player from scratch. Persisting it keeps that a one-time cost.
+      - app-cache:/app/.cache
     depends_on:
       - tailscale
     restart: unless-stopped
 
 volumes:
   tailscale-state:
+  app-cache:
