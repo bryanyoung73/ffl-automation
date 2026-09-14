@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { rosProjection, positionalReplacement, valuePlayers, type ValueInput } from "../src/waivers/value.js";
+import { rosProjection, positionalReplacement, valuePlayers, blendSeasonProj, type ValueInput } from "../src/waivers/value.js";
 import type { LeagueSettings } from "../src/draft/types.js";
 import type { PlayerIntel } from "../src/intel/types.js";
 
@@ -51,6 +51,26 @@ test("valuePlayers blends ROS and week by rosWeight, adds buzz", () => {
   expect(now.get("rb1")!.blended).toBeCloseTo(now.get("rb1")!.weekVal + now.get("rb1")!.buzz, 1);
   // the riser's buzz is capped at 3
   expect(ros.get("rb1")!.buzz).toBe(3);
+});
+
+test("blendSeasonProj averages two independent projections, falls back to primary alone", () => {
+  expect(blendSeasonProj(300, 200)).toBe(250);
+  expect(blendSeasonProj(300, undefined)).toBe(300);
+  expect(blendSeasonProj(300, 0)).toBe(300); // no real secondary data — don't drag the average to 150
+});
+
+test("valuePlayers blends in a secondary season projection before computing rosVal", () => {
+  // 2 teams x 1 QB starter = 2 league-wide starting slots -> replacement is
+  // the 3rd-best ros among these three, i.e. "c" (100), in both runs.
+  const b = fa("b", "QB", 10, 200);
+  const c = fa("c", "QB", 10, 100);
+  const without = valuePlayers([fa("a", "QB", 15, 300), b, c], { settings, rosWeight: 1 }).get("a")!;
+  const withSecondary: ValueInput = { ...fa("a", "QB", 15, 300), secondarySeasonProj: 200 };
+  const with_ = valuePlayers([withSecondary, b, c], { settings, rosWeight: 1 }).get("a")!;
+
+  // blended seasonProj = (300+200)/2 = 250 -> rosVal reflects 250, not 300
+  expect(without.rosVal).toBeCloseTo(200, 0); // 300 - replacement(100)
+  expect(with_.rosVal).toBeCloseTo(150, 0); // 250 - replacement(100)
 });
 
 test("intel nudges ROS by seasonImpact and this-week by weekImpact", () => {

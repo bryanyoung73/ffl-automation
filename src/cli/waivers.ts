@@ -5,6 +5,7 @@ import { loadConfig } from "../config.js";
 import { getProvider, providerLabel } from "../providers/index.js";
 import { collectIntel } from "../intel/collect.js";
 import { valuePlayers, type ValueInput } from "../waivers/value.js";
+import { fetchSecondarySeasonProjections } from "../waivers/secondary.js";
 import { buildAddDrops } from "../waivers/pairs.js";
 import type { AddDropPair } from "../waivers/types.js";
 import { hasFlag, intFlag, strFlag } from "./prompt.js";
@@ -61,6 +62,11 @@ async function main(): Promise<void> {
 
     const settings = await provider.getLeagueSettings();
 
+    // A second opinion on ROS value from Sleeper's own model (independent of
+    // whichever provider is active), so a single provider's rosy/pessimistic
+    // season projection doesn't go unchecked. See src/waivers/secondary.ts.
+    const secondary = await fetchSecondarySeasonProjections(config, intelRefs, settings.scoring);
+
     const inputs: ValueInput[] = [
       ...fas.map((f) => ({
         id: f.id,
@@ -69,6 +75,7 @@ async function main(): Promise<void> {
         seasonProj: f.seasonProj,
         actualSoFar: f.actualSoFar,
         pctChange: f.pctChange,
+        secondarySeasonProj: secondary.get(f.id),
       })),
       ...roster.map((p) => ({
         id: p.id,
@@ -76,6 +83,7 @@ async function main(): Promise<void> {
         weekProj: p.projectedPoints,
         seasonProj: p.seasonProjectedPoints ?? p.projectedPoints * 17,
         actualSoFar: p.pointsSoFar ?? 0,
+        secondarySeasonProj: secondary.get(p.id),
       })),
     ];
     const values = valuePlayers(inputs, { settings, intelById, rosWeight });

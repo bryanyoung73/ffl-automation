@@ -3,6 +3,32 @@
 Date: 2026-09-03
 Status: Phase 1 shipped; phases 2–4 not started
 
+## Addendum — 2026-09-14: blended ROS projection
+
+Live use surfaced a real gap: `rosVal` trusted the active provider's
+`seasonProj` alone. Comparing Daniel Jones vs Bryce Young on the actual
+league found ESPN and Sleeper disagreeing on which QB was better rest-of-
+season (ESPN: Jones 318.9 > Young 291.3; Sleeper: Young 235.6 > Jones
+223.5) — ESPN's number for Jones was a real outlier, and `rosVal` had no way
+to know that.
+
+Fix: `ValueInput.secondarySeasonProj` (optional) + `blendSeasonProj(primary,
+secondary)` in `src/waivers/value.ts` — a plain average, used wherever
+`rosProjection` is computed (`positionalReplacement` and `valuePlayers`), so
+the replacement baseline and every player's value are on the same blended
+basis. `src/waivers/secondary.ts` fetches Sleeper's season projections
+(`providers/sleeper/projections.ts`) and identity-matches them to the active
+provider's player ids (`intel/match.ts`) — works regardless of which
+provider is configured, since Sleeper's read API needs no auth; skipped when
+Sleeper *is* the active provider (nothing to add). Wired into both
+`cli/waivers.ts` and `server/data.ts` (the dashboard) identically.
+
+Verified live: re-running the blend dropped Jones' `rosVal` from 83.3 to
+50.9 (ESPN's outlier optimism diluted) and changed the day's actual top
+recommendation from Daniel Jones to Sam Darnold, whose ESPN/Sleeper
+projections were in much closer agreement (284.0 vs 262.7) and so held up
+better under blending than a projection only one source believed in.
+
 ## Problem
 
 In-season, the weekly grind after setting a lineup is the waiver wire: scan the

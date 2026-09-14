@@ -13,12 +13,19 @@ export interface ValueInput {
   position: string;
   /** Projected points, target week. */
   weekProj: number;
-  /** Projected points, full season. */
+  /** Projected points, full season, from the active provider's own model. */
   seasonProj: number;
   /** Points scored so far this season (0 early). */
   actualSoFar: number;
   /** Rostered-% momentum (0 for your own players — we don't fetch it there). */
   pctChange?: number;
+  /**
+   * An independent season projection from a second source (Sleeper's own
+   * model, fetched regardless of the active provider — see
+   * src/waivers/secondary.ts). Blended with `seasonProj` so ROS value isn't
+   * riding on one provider's idiosyncratic model alone.
+   */
+  secondarySeasonProj?: number;
 }
 
 export interface ValueOptions {
@@ -35,6 +42,16 @@ const SEASON_PTS_PER_IMPACT = 6;
 
 const clamp = (n: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, n));
 const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+/**
+ * Blend two independent season projections — a plain average, so neither
+ * source's bias dominates. Falls back to `primary` alone when there's no
+ * second opinion (Sleeper had no identity match, or wasn't fetched).
+ */
+export function blendSeasonProj(primary: number, secondary?: number): number {
+  if (secondary === undefined || secondary <= 0) return primary;
+  return round2((primary + secondary) / 2);
+}
 
 /** Rest-of-season projection = full-season projection minus what's banked. */
 export function rosProjection(seasonProj: number, actualSoFar: number): number {
@@ -58,7 +75,7 @@ export function positionalReplacement(
 ): Map<string, number> {
   const byPos = new Map<string, number[]>();
   for (const p of players) {
-    const ros = rosProjection(p.seasonProj, p.actualSoFar);
+    const ros = rosProjection(blendSeasonProj(p.seasonProj, p.secondarySeasonProj), p.actualSoFar);
     const list = byPos.get(p.position);
     if (list) list.push(ros);
     else byPos.set(p.position, [ros]);
@@ -82,7 +99,7 @@ export function valuePlayers(
   const out = new Map<string, PlayerValue>();
   for (const p of players) {
     const intel = opts.intelById?.get(p.id);
-    const ros = rosProjection(p.seasonProj, p.actualSoFar);
+    const ros = rosProjection(blendSeasonProj(p.seasonProj, p.secondarySeasonProj), p.actualSoFar);
     const rosVal = round2(
       ros - (replacement.get(p.position) ?? 0) + (intel?.seasonImpact ?? 0) * SEASON_PTS_PER_IMPACT,
     );

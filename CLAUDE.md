@@ -13,8 +13,11 @@ TypeScript automation for a fantasy football team, against Yahoo or ESPN
    yet exercised (see Current status).
 3. **Waiver wire** (`npm run waivers`, ESPN + Sleeper) — ranks free agents +
    your bench by a blended value (ROS + this week + buzz), pairs adds with legal
-   drops, lists DEF/K streams. Phase 1; see
-   `docs/specs/2026-09-03-waiver-wire.md`.
+   drops, lists DEF/K streams. ROS value blends the active provider's season
+   projection with an independent second opinion from Sleeper's own model
+   (`src/waivers/secondary.ts`, `blendSeasonProj` in `value.ts`) — a single
+   provider's optimistic/pessimistic bias on one player no longer stands
+   alone. Phase 1; see `docs/specs/2026-09-03-waiver-wire.md`.
 4. **Player intel** (`src/intel/`) — chatter/news/injury/Vegas signal feeding
    1–3.
 5. **Live draft assistant** (`npm run draft`, ESPN only) — polls `mDraftDetail`,

@@ -6,6 +6,7 @@ import { diffLineup, optimizeLineup } from "../lineup/optimizer.js";
 import type { LineupDiff, LineupPlan } from "../lineup/types.js";
 import type { ProjectionAdjustment } from "../intel/apply.js";
 import { valuePlayers, type ValueInput } from "../waivers/value.js";
+import { fetchSecondarySeasonProjections } from "../waivers/secondary.js";
 import { buildAddDrops } from "../waivers/pairs.js";
 import type { WaiverReport } from "../waivers/types.js";
 
@@ -78,6 +79,10 @@ export async function getWaiverView(config: Config): Promise<WaiverView> {
     const settings = await provider.getLeagueSettings();
     const rosWeight = 0.7;
 
+    // A second opinion on ROS value from Sleeper's own model — see
+    // src/waivers/secondary.ts and src/cli/waivers.ts (same pipeline).
+    const secondary = await fetchSecondarySeasonProjections(config, intelRefs, settings.scoring);
+
     const inputs: ValueInput[] = [
       ...fas.map((f) => ({
         id: f.id,
@@ -86,6 +91,7 @@ export async function getWaiverView(config: Config): Promise<WaiverView> {
         seasonProj: f.seasonProj,
         actualSoFar: f.actualSoFar,
         pctChange: f.pctChange,
+        secondarySeasonProj: secondary.get(f.id),
       })),
       ...roster.map((p) => ({
         id: p.id,
@@ -93,6 +99,7 @@ export async function getWaiverView(config: Config): Promise<WaiverView> {
         weekProj: p.projectedPoints,
         seasonProj: p.seasonProjectedPoints ?? p.projectedPoints * 17,
         actualSoFar: p.pointsSoFar ?? 0,
+        secondarySeasonProj: secondary.get(p.id),
       })),
     ];
     const values = valuePlayers(inputs, { settings, intelById: bundle.intel, rosWeight });
