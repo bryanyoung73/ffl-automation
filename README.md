@@ -108,6 +108,7 @@ Chrome dance.
 | `npm run lineup -- --yes` | Skip the confirmation prompt. |
 | `npm run lineup -- --pin 12345` | Force player id `12345` to keep its current start slot (repeatable). |
 | `npm run lineup -- --no-intel` | Optimize on raw projections, no chatter adjustment. |
+| `npm run web` | Read-only dashboard (optimal lineup + waiver suggestions) at `http://localhost:4173`, installable as a PWA. See "Web dashboard" below. |
 | `npm test` | Unit tests + live page-object check (the live check auto-skips with no session). |
 | `npm run test:unit` | Optimizer unit tests only — fast, no browser. |
 | `npm run codegen` | Open Playwright codegen against Yahoo to grab real selectors. |
@@ -135,6 +136,23 @@ Chrome dance.
 | `INTEL_LLM` | _(off)_ | `1` to default the Claude news digest on (same as passing `--llm`). |
 | `INTEL_LLM_MODEL` | `claude-opus-5` | Model for the digest. `claude-haiku-4-5` is ~15x cheaper. |
 | `ANTHROPIC_API_KEY` | — | Required only when the LLM digest is used. Sleeper + ESPN news need no key. |
+| `WEB_PORT` | `4173` | Port for `npm run web`. |
+| `WEB_HOST` | `0.0.0.0` | Bind address for `npm run web` — the default binds every interface so a tailnet can reach it. |
+
+## Web dashboard
+
+`npm run web` starts a small read-only dashboard — the same optimal lineup and
+waiver suggestions as `npm run lineup` / `npm run waivers`, in a browser. No
+submit button; it's a display only. Open `http://localhost:4173` locally, or
+reach it from your phone over Tailscale:
+
+```bash
+tailscale serve https / 4173   # one-time, on the machine running `npm run web`
+```
+
+That publishes `https://<machine>.<tailnet>.ts.net` — open it on your phone and
+"Add to Home Screen" installs it as an app icon. See
+`docs/specs/2026-09-14-web-dashboard.md` for details.
 
 ## Layout
 

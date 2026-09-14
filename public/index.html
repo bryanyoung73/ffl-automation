@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FFL Dashboard</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <meta name="theme-color" content="#0b1220" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header>
+    <h1>FFL Dashboard</h1>
+    <p id="meta" class="muted"></p>
+  </header>
+
+  <main>
+    <section id="lineup-section">
+      <div class="section-head">
+        <h2>Optimal lineup</h2>
+        <button data-refresh="lineup">Refresh</button>
+      </div>
+      <div id="lineup-body">Loading…</div>
+    </section>
+
+    <section id="waivers-section">
+      <div class="section-head">
+        <h2>Waiver suggestions</h2>
+        <button data-refresh="waivers">Refresh</button>
+      </div>
+      <div id="waivers-body">Loading…</div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

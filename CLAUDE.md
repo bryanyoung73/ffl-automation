@@ -22,6 +22,10 @@ TypeScript automation for a fantasy football team, against Yahoo or ESPN
    pick recommendations with reasons (turn math, survival odds, tier cliffs,
    positional runs). Snake only. See
    `docs/specs/2026-09-03-live-draft-assistant.md`.
+6. **Web dashboard** (`npm run web`) — read-only PWA showing the optimal
+   lineup + waiver suggestions in a browser (meant for a phone over
+   Tailscale). No submit button — display only, reuses 2/3's pipelines
+   verbatim. See `docs/specs/2026-09-14-web-dashboard.md`.
 
 Stack: `@playwright/test`, `tsx` for CLIs, ESM, strict TS. No framework.
 
@@ -182,9 +186,16 @@ src/
     draft-review.ts    `npm run draft:review -- <log>` — post-draft calibration report
     intel.ts           `npm run intel` — preview the roster's chatter
     waivers.ts         `npm run waivers` (ESPN) — add/drop recommendations
+    serve.ts           `npm run web` — starts the read-only dashboard server
     prompt.ts
   waivers/             types.ts + value.ts (PURE blend) + pairs.ts (PURE
                        add/drop pairing, protection rules, streaming)
+  server/              data.ts (getLineupView/getWaiverView — reuse the
+                       lineup/waivers pipelines, no writes) + http.ts
+                       (node:http; /api/lineup, /api/waivers, static `public/`)
+public/                dashboard PWA: index.html, app.js, style.css,
+                       manifest.webmanifest, sw.js, icon.svg — vanilla, no
+                       build step, no framework
 tests/
   optimizer.spec.ts  vor.spec.ts  diff.spec.ts  report.spec.ts  board.spec.ts
   espn-maps.spec.ts  espn-league.spec.ts  board-intel.spec.ts
