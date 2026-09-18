@@ -55,6 +55,21 @@ export function isActionable(text: string): boolean {
   );
 }
 
+/**
+ * Newest first. A blurb with no usable date sorts last — we can't trust an
+ * undated claim over a dated one. Without this, a stale blurb (e.g. a
+ * preseason report) sitting anywhere but first in ESPN's own feed order can
+ * end up dominating a downstream LLM read that assumes "first = newest."
+ */
+export function sortByRecency(blurbs: readonly NewsBlurb[]): NewsBlurb[] {
+  return [...blurbs].sort((a, b) => {
+    if (!a.asOf && !b.asOf) return 0;
+    if (!a.asOf) return 1;
+    if (!b.asOf) return -1;
+    return b.asOf.localeCompare(a.asOf);
+  });
+}
+
 export function espnIdFor(ctx: IntelContext, p: IntelPlayerRef): string | undefined {
   return ctx.identity(p.id)?.espnId ?? (/^\d+$/.test(p.id) ? p.id : undefined);
 }
@@ -88,5 +103,5 @@ export async function fetchPlayerNews(
       asOf: it.published ?? it.lastModified ?? "",
     });
   }
-  return out;
+  return sortByRecency(out);
 }

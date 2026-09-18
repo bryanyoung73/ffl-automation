@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { isPlayerBlurb, scoreHeadline, isActionable } from "../src/intel/providers/espnNews.js";
+import { sortByRecency } from "../src/intel/providers/espnNewsFeed.js";
+import type { NewsBlurb } from "../src/intel/providers/espnNewsFeed.js";
 
 test("isPlayerBlurb accepts beat-writer blurbs, rejects roundups", () => {
   expect(isPlayerBlurb("Gibbs had a strong day in the Lions' final practice", "Jahmyr Gibbs")).toBe(true);
@@ -19,6 +21,21 @@ test("isActionable keeps availability/usage blurbs, drops opinion pieces", () =>
   expect(isActionable("Judkins didn't play in Thursday's exhibition win")).toBe(true);
   expect(isActionable("Why Garrett Wilson is a fantasy 'red flag' for Field Yates")).toBe(false);
   expect(isActionable("Bold predictions for the 2026 season")).toBe(false);
+});
+
+test("sortByRecency puts the newest blurb first regardless of feed order", () => {
+  // Real bug: ESPN's feed isn't guaranteed newest-first, and a stale
+  // preseason blurb sitting ahead of a fresh regular-season one made a
+  // downstream LLM read lead with the wrong story.
+  const blurbs: NewsBlurb[] = [
+    { headline: "Preseason: deep bench reserve behind the starter", description: "", asOf: "2026-08-20T00:00:00Z" },
+    { headline: "Threw for 410 yards and 3 TDs in Sunday's OT loss", description: "", asOf: "2026-09-13T22:53:20Z" },
+    { headline: "No usable date", description: "", asOf: "" },
+  ];
+  const sorted = sortByRecency(blurbs);
+  expect(sorted[0]!.headline).toBe("Threw for 410 yards and 3 TDs in Sunday's OT loss");
+  expect(sorted[1]!.headline).toBe("Preseason: deep bench reserve behind the starter");
+  expect(sorted[2]!.headline).toBe("No usable date"); // undated sorts last, not trusted as "newest"
 });
 
 test("scoreHeadline: unambiguous injury/return language only", () => {

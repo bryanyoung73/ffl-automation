@@ -270,7 +270,13 @@ sends the actionable blurbs to Claude and gets back one structured
 week/season/confidence + a summary note; per-player results cache under
 `.cache/llm-digest/` keyed by a hash of the blurb text, so a `--refresh` that
 doesn't change the news costs nothing. `--no-intel` bypasses all of it;
-`--refresh` re-fetches. See `docs/specs/2026-09-02-player-intel.md`.
+`--refresh` re-fetches. `fetchPlayerNews` (`espnNewsFeed.ts`) sorts blurbs
+newest-first before either provider sees them (`sortByRecency`) — ESPN's feed
+order isn't reliably chronological, and an unsorted stale blurb (e.g. a
+preseason report) sitting ahead of a fresh regular-season one once made the
+LLM digest lead its summary with the wrong story. The digest's system prompt
+also explicitly tells it a newer blurb supersedes an older, conflicting one.
+See `docs/specs/2026-09-02-player-intel.md`.
 
 ## Conventions
 

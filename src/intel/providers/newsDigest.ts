@@ -32,6 +32,12 @@ const SYSTEM = [
   "You are a fantasy football analyst.",
   "Given the most recent news blurbs about ONE NFL player, produce a single",
   "structured read of how the news changes his fantasy value.",
+  "The blurbs are ordered newest first. When blurbs conflict — most commonly",
+  "an older preseason report next to a newer regular-season one — the newest",
+  "blurb describes his CURRENT reality and must drive the read. Do not lead",
+  "the summary with a superseded older blurb (e.g. preseason snap counts or",
+  "depth-chart notes once the regular season has started); mention it only if",
+  "the newer blurbs say nothing more decision-relevant.",
   "Base the assessment ONLY on the blurbs provided. If they say nothing that",
   "moves the needle, return zeros with low confidence.",
   "week_impact / season_impact are on a -3..+3 scale: -3 = do not start / hard",
@@ -75,7 +81,7 @@ export function buildDigestInput(
     `Player: ${player.name} (${player.position}, ${player.team})`,
     `Upcoming NFL week: ${week || "preseason"}`,
     "",
-    "Recent blurbs:",
+    "Recent blurbs (newest first):",
     ...lines,
   ].join("\n");
 }
