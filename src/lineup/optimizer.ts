@@ -187,8 +187,13 @@ export function diffLineup(players: readonly Player[], plan: LineupPlan): Lineup
 
   const changes: LineupChange[] = [];
   for (const player of players) {
-    const to = targetSlotById.get(player.id) ?? "BN";
     const from = normalizeSlot(player.currentSlot);
+    // A player left out of the plan isn't necessarily headed to the bench —
+    // he might already be resting on IR, a distinct slot from BN with its own
+    // roster-limit rules on ESPN. Only default to "BN" when he was actually
+    // starting before (a real bench move); otherwise leave him exactly where
+    // he already is, so we never manufacture a zero-benefit "IR -> BN" change.
+    const to = targetSlotById.get(player.id) ?? (isStartingSlot(from) ? "BN" : from);
     if (baseSlot(to) !== baseSlot(from)) {
       changes.push({ player, fromSlot: from, toSlot: to });
     }

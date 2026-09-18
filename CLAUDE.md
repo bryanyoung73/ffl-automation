@@ -56,7 +56,14 @@ source for every command. All implement `LeagueProvider`
   starting slot — `optimizeLineup`'s status filter ran before pinning and
   excluded him outright. Fixed: pinning now overrides the unstartable filter
   for that one player's own slot only (never lets a pinned bench player get
-  promoted elsewhere). See `docs/specs/2026-08-31-espn-api-provider.md`.
+  promoted elsewhere). A related bug once the player's slot flipped from a
+  starting slot to the actual "IR" roster slot: `diffLineup` defaulted any
+  non-starting player's target slot to `"BN"` unconditionally, so a player
+  already resting on IR (not started, not benched — just never a candidate)
+  got a manufactured "IR -> BN" change with zero point benefit. Fixed: that
+  default only applies when the player was actually starting before;
+  otherwise he stays exactly where he already is. See
+  `docs/specs/2026-08-31-espn-api-provider.md`.
   Note (2026-09-07): `mDraftDetail` does **not** carry live picks during a
   clock-running draft — it stays a skeleton until the draft completes. So the
   live draft assistant only works on ESPN *after the fact*. Sleeper is the fix.

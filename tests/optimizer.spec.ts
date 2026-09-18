@@ -176,6 +176,32 @@ test("diffLineup reports only real moves and the projection swing", () => {
   expect(diff.delta).toBe(10);
 });
 
+test("diffLineup never invents an IR -> BN move for a player who was never a candidate to start", () => {
+  // Real scenario: A.J. Brown sits on the actual IR roster slot (not a
+  // starting slot), on IR status, so the optimizer correctly never considers
+  // him for a starting spot. He wasn't benched out of anything -- he was
+  // already resting on IR -- so there must be no "change" for him at all.
+  const players = [
+    player({ id: "starter", name: "Healthy Starter", position: "WR", projectedPoints: 12, currentSlot: "WR" }),
+    player({ id: "hurt", name: "A.J. Brown", position: "WR", projectedPoints: 0, status: "IR", currentSlot: "IR" }),
+  ];
+  const plan = optimizeLineup(players, ["WR"]);
+  const diff = diffLineup(players, plan);
+  expect(diff.changes).toHaveLength(0);
+  expect(diff.needsSubmit).toBe(false);
+});
+
+test("diffLineup still reports a real bench move for a player who WAS starting and got cut", () => {
+  const players = [
+    player({ id: "out", name: "Outgoing Starter", position: "WR", projectedPoints: 5, currentSlot: "WR" }),
+    player({ id: "in", name: "Better WR", position: "WR", projectedPoints: 20, currentSlot: "BN" }),
+  ];
+  const plan = optimizeLineup(players, ["WR"]);
+  const diff = diffLineup(players, plan);
+  const outgoing = diff.changes.find((c) => c.player.name === "Outgoing Starter");
+  expect(outgoing).toMatchObject({ fromSlot: "WR", toSlot: "BN" });
+});
+
 test("diffLineup is empty when the lineup is already optimal", () => {
   const players = [
     player({ id: "a", name: "Good", position: "QB", projectedPoints: 22, currentSlot: "QB" }),
