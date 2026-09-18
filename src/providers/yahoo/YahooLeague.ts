@@ -49,7 +49,10 @@ export class YahooLeague implements LeagueProvider {
     const { page } = await this.ensureSession();
     const lineup = new LineupPage(page, this.config);
     await lineup.goto();
-    return lineup.readRoster();
+    const result = await lineup.readRoster();
+    // Yahoo doesn't expose the page's actual current week to us — best we can
+    // do is echo back an explicitly configured YAHOO_WEEK, if any.
+    return { ...result, week: result.week ?? this.config.week };
   }
 
   async getFreeAgents(): Promise<never> {

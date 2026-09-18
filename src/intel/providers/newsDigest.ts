@@ -148,7 +148,11 @@ export const newsDigestProvider: IntelProvider = {
       const blurbs = await fetchPlayerNews(ctx, p);
       if (blurbs.length === 0) return;
 
-      const key = `${espnIdFor(ctx, p) ?? p.id}-${blurbHash(blurbs)}.json`;
+      // Include the week so a digest computed while the week was wrongly
+      // unresolved (e.g. "preseason" instead of a real in-season week)
+      // doesn't stick around under the same key for up to DIGEST_TTL_MS just
+      // because the underlying blurbs haven't changed since.
+      const key = `${espnIdFor(ctx, p) ?? p.id}-wk${ctx.week}-${blurbHash(blurbs)}.json`;
       const cached = readCache<PartialIntel>(digestDir, key, DIGEST_TTL_MS);
       if (cached) {
         out.set(p.id, cached);

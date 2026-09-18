@@ -342,7 +342,7 @@ export class EspnLeague implements LeagueProvider {
     }
     const entries = team.roster?.entries ?? [];
     const players = entries.map((e) => mapRosterEntry(e, targetWeek, this.espn.season));
-    return { players, startingSlotCodes: startingSlotCodes(raw) };
+    return { players, startingSlotCodes: startingSlotCodes(raw), week: targetWeek };
   }
 
   async getFreeAgents(week?: number): Promise<FreeAgent[]> {

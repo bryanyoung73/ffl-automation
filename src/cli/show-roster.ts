@@ -16,12 +16,13 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const provider = getProvider(config);
   try {
-    const { players: rawPlayers, startingSlotCodes } = await provider.getRoster(config.week);
+    const { players: rawPlayers, startingSlotCodes, week: resolvedWeek } = await provider.getRoster(config.week);
 
     const { players, adjustments, fetchedAt, skipped } = await applyWeeklyIntel(config, rawPlayers, {
       skip: hasFlag("no-intel"),
       force: hasFlag("refresh"),
       llm: hasFlag("llm"),
+      week: resolvedWeek,
     });
 
     const rows = players

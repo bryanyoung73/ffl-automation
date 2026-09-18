@@ -114,6 +114,7 @@ export class SleeperLeague implements LeagueProvider {
     return {
       players: mapRoster(mine, positions, byId, pts),
       startingSlotCodes: startingSlotCodes(positions),
+      week: wk,
     };
   }
 

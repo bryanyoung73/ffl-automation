@@ -44,6 +44,15 @@ export interface RosterReadResult {
   players: Player[];
   /** Slot codes of the current starting lineup, in table order. */
   startingSlotCodes: string[];
+  /**
+   * The actual NFL week these projections/news are for — resolved by the
+   * provider (its own "current scoring period") when the caller didn't pin
+   * one. Without this, downstream callers (the intel/LLM digest) fall back
+   * to `config.week`, which is usually unset, and wrongly assume preseason
+   * all season long. Undefined only for a provider that can't determine it
+   * (Yahoo, for now).
+   */
+  week?: number;
 }
 
 export interface StartingSlot {

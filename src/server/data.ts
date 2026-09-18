@@ -28,12 +28,14 @@ export interface LineupView {
 export async function getLineupView(config: Config): Promise<LineupView> {
   const provider = getProvider(config);
   try {
-    const { players: rawPlayers, startingSlotCodes } = await provider.getRoster(config.week);
+    const { players: rawPlayers, startingSlotCodes, week: resolvedWeek } = await provider.getRoster(config.week);
     if (startingSlotCodes.length === 0) {
       throw new Error("No starting slots detected — check the roster/provider config.");
     }
 
-    const { players, adjustments, fetchedAt } = await applyWeeklyIntel(config, rawPlayers, {});
+    // Prefer the provider's own resolved current week over config.week (which
+    // is usually unset) so the LLM digest doesn't wrongly assume preseason.
+    const { players, adjustments, fetchedAt } = await applyWeeklyIntel(config, rawPlayers, { week: resolvedWeek });
 
     // Mirror set-lineup.ts: a locked player (game already started) can't
     // move — pin him so the optimizer works around him instead of proposing
@@ -43,7 +45,7 @@ export async function getLineupView(config: Config): Promise<LineupView> {
     const plan = optimizeLineup(players, startingSlotCodes, { pinnedPlayerIds });
     const diff = diffLineup(players, plan);
 
-    return { provider: config.provider, week: config.week, plan, diff, adjustments, fetchedAt };
+    return { provider: config.provider, week: config.week ?? resolvedWeek, plan, diff, adjustments, fetchedAt };
   } finally {
     await provider.close();
   }
@@ -61,7 +63,7 @@ export async function getWaiverView(config: Config): Promise<WaiverView> {
 
   const provider = getProvider(config);
   try {
-    const [{ players: roster }, fas] = await Promise.all([
+    const [{ players: roster, week: resolvedWeek }, fas] = await Promise.all([
       provider.getRoster(config.week),
       provider.getFreeAgents(config.week),
     ]);
@@ -69,12 +71,14 @@ export async function getWaiverView(config: Config): Promise<WaiverView> {
       return { unavailable: true, reason: "Roster is empty (league not drafted?) — nothing to compare against." };
     }
 
-    const week = config.week ?? 0;
+    // Prefer the provider's own resolved current week over config.week (which
+    // is usually unset) so the LLM digest doesn't wrongly assume preseason.
+    const week = config.week ?? resolvedWeek ?? 0;
     const intelRefs = [
       ...roster.map((p) => ({ id: p.id, name: p.name, team: p.team, position: p.position })),
       ...fas.map((f) => ({ id: f.id, name: f.name, team: f.team, position: f.position })),
     ];
-    const bundle = await collectIntel(config, intelRefs, { scope: "waivers" });
+    const bundle = await collectIntel(config, intelRefs, { scope: "waivers", week });
 
     const settings = await provider.getLeagueSettings();
     const rosWeight = 0.7;

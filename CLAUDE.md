@@ -268,15 +268,28 @@ and `newsDigest` (LLM, opt-in via `--llm` or `INTEL_LLM=1`, needs
 `ANTHROPIC_API_KEY`; `INTEL_LLM_MODEL` defaults to `claude-opus-5`). The digest
 sends the actionable blurbs to Claude and gets back one structured
 week/season/confidence + a summary note; per-player results cache under
-`.cache/llm-digest/` keyed by a hash of the blurb text, so a `--refresh` that
-doesn't change the news costs nothing. `--no-intel` bypasses all of it;
-`--refresh` re-fetches. `fetchPlayerNews` (`espnNewsFeed.ts`) sorts blurbs
-newest-first before either provider sees them (`sortByRecency`) — ESPN's feed
-order isn't reliably chronological, and an unsorted stale blurb (e.g. a
-preseason report) sitting ahead of a fresh regular-season one once made the
-LLM digest lead its summary with the wrong story. The digest's system prompt
-also explicitly tells it a newer blurb supersedes an older, conflicting one.
-See `docs/specs/2026-09-02-player-intel.md`.
+`.cache/llm-digest/` keyed by a hash of the blurb text **and the resolved
+week** (`wk${ctx.week}`), so a `--refresh` that doesn't change the news costs
+nothing. `--no-intel` bypasses all of it; `--refresh` re-fetches.
+`fetchPlayerNews` (`espnNewsFeed.ts`) sorts blurbs newest-first before either
+provider sees them (`sortByRecency`) — ESPN's feed order isn't reliably
+chronological, and an unsorted stale blurb (e.g. a preseason report) sitting
+ahead of a fresh regular-season one once made the LLM digest lead its summary
+with the wrong story. The digest's system prompt also explicitly tells it a
+newer blurb supersedes an older, conflicting one.
+**Week resolution**: `collectIntel`'s `week` option used to default to
+`config.week`, which is normally unset — so the digest prompt always said
+"Upcoming NFL week: preseason," all season, for anyone who hadn't manually
+pinned `ESPN_WEEK`/`YAHOO_WEEK`. `RosterReadResult` now carries the
+provider's own resolved current week (ESPN's `scoringPeriodId`, Sleeper's
+`state/nfl`), and every weekly caller (`set-lineup`, `show-roster`,
+`waivers`, `intel`, the dashboard's `server/data.ts`) passes it through
+instead of trusting `config.week` alone. The week is baked into the digest's
+own cache key specifically so a response computed under the old
+wrongly-"preseason" context self-heals immediately rather than surviving
+its 7-day TTL. (Yahoo has no way to report its true current week yet — it
+just echoes back an explicitly configured `YAHOO_WEEK`, same limitation as
+before.) See `docs/specs/2026-09-02-player-intel.md`.
 
 ## Conventions
 

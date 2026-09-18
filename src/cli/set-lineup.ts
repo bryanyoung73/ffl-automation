@@ -25,7 +25,7 @@ async function main(): Promise<void> {
   const provider = getProvider(config);
   const label = providerLabel(config);
   try {
-    const { players: rawPlayers, startingSlotCodes } = await provider.getRoster(config.week);
+    const { players: rawPlayers, startingSlotCodes, week: resolvedWeek } = await provider.getRoster(config.week);
     if (startingSlotCodes.length === 0) {
       throw new Error("No starting slots detected — cannot optimize. Check `npm run roster`.");
     }
@@ -34,6 +34,7 @@ async function main(): Promise<void> {
       skip: hasFlag("no-intel"),
       force: hasFlag("refresh"),
       llm: hasFlag("llm"),
+      week: resolvedWeek,
     });
 
     // A locked player (game already started) can't move — pin him so the

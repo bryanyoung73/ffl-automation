@@ -16,10 +16,11 @@ async function main(): Promise<void> {
   const useSeason = hasFlag("season");
   const provider = getProvider(config);
   try {
-    const { players } = await provider.getRoster(config.week);
+    const { players, week: resolvedWeek } = await provider.getRoster(config.week);
     const bundle = await collectIntel(config, players, {
       force: hasFlag("refresh"),
       llm: hasFlag("llm"),
+      week: config.week ?? resolvedWeek,
     });
 
     console.log(

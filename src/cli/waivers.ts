@@ -32,7 +32,7 @@ async function main(): Promise<void> {
   const provider = getProvider(config);
   try {
     console.log(`Reading ${providerLabel(config)} roster + free agents...`);
-    const [{ players: roster }, fas] = await Promise.all([
+    const [{ players: roster, week: resolvedWeek }, fas] = await Promise.all([
       provider.getRoster(config.week),
       provider.getFreeAgents(config.week),
     ]);
@@ -42,7 +42,9 @@ async function main(): Promise<void> {
       return;
     }
 
-    const week = config.week ?? 0;
+    // Prefer the provider's own resolved current week over config.week (which
+    // is usually unset) so the LLM digest doesn't wrongly assume preseason.
+    const week = config.week ?? resolvedWeek ?? 0;
     const intelRefs = [
       ...roster.map((p) => ({ id: p.id, name: p.name, team: p.team, position: p.position })),
       ...fas.map((f) => ({ id: f.id, name: f.name, team: f.team, position: f.position })),
@@ -55,6 +57,7 @@ async function main(): Promise<void> {
         scope: "waivers",
         force: hasFlag("refresh"),
         llm: hasFlag("llm"),
+        week,
       });
       intelById = bundle.intel;
       intelAsOf = bundle.fetchedAt;

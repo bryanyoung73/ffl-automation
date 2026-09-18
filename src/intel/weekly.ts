@@ -19,12 +19,15 @@ export interface WeeklyIntelResult {
 export async function applyWeeklyIntel(
   config: Config,
   players: readonly Player[],
-  opts: { skip?: boolean; force?: boolean; llm?: boolean } = {},
+  opts: { skip?: boolean; force?: boolean; llm?: boolean; week?: number } = {},
 ): Promise<WeeklyIntelResult> {
   if (opts.skip) {
     return { players: [...players], adjustments: [], fetchedAt: "", skipped: true };
   }
-  const bundle = await collectIntel(config, players, { force: opts.force, llm: opts.llm });
+  // Prefer the provider's own resolved current week (from RosterReadResult)
+  // over config.week, which is usually unset — otherwise the LLM digest
+  // wrongly assumes preseason all season long. See src/cli/set-lineup.ts.
+  const bundle = await collectIntel(config, players, { force: opts.force, llm: opts.llm, week: opts.week });
   const { players: adjusted, adjustments } = adjustProjections(players, bundle.intel, {
     horizon: "week",
   });
