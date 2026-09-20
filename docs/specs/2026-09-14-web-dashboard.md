@@ -106,3 +106,27 @@ label swaps), but `public/app.js`'s `renderLineup` only checked whether
 `needsSubmit` exactly like the CLI, with the same "cosmetic slot swaps,
 nothing to submit" wording when `changes` is non-empty but no real submit
 is needed.
+
+## Addendum — 2026-09-21: the service worker was hiding every future deploy
+
+Live bug: after shipping the live/final score column, a `git pull` +
+`docker compose up -d --build` on the NAS didn't make it appear — the
+browser kept showing the old page indefinitely. Root cause: `sw.js` cached
+the app shell (`app.js`, `index.html`, etc.) **cache-first** under a static
+cache name (`ffl-shell-v1`) that never changed between deploys. Once a
+browser had `app.js` cached, it never asked the server again — a rebuilt,
+redeployed server was completely invisible to it. This defeats the entire
+point of a live sports dashboard.
+
+Fixed: the app shell is now **network-first** (`sw.js`), with the cache used
+only as a genuine offline fallback when the network fetch fails — the same
+policy `/api/*` already had. Also bumped the cache name to `ffl-shell-v2` so
+the `activate` handler's existing cleanup (`caches.keys()` minus the current
+`SHELL_CACHE`) actually evicts the old, wrong cache once this update lands
+rather than silently reusing it.
+
+**This fix requires an active step from anyone who already installed the
+PWA**: since the OLD service worker is what decides whether to even notice
+a new `sw.js`, a plain redeploy might still need a hard refresh (or fully
+closing and reopening the installed app) once to pick up the fix. After
+that, deploys should always show up on the next normal reload.

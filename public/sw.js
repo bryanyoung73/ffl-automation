@@ -1,4 +1,4 @@
-const SHELL_CACHE = "ffl-shell-v1";
+const SHELL_CACHE = "ffl-shell-v2";
 const SHELL_FILES = ["/", "/app.js", "/style.css", "/manifest.webmanifest", "/icon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -22,16 +22,20 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // App shell: cache-first, falling back to network (and re-caching).
+  // App shell: network-first. This dashboard's whole point is showing
+  // current state (locked players, live scores) — a stale cached app.js
+  // silently serving an old version forever (which is exactly what happened
+  // here: a cache-first strategy with a static cache name meant a rebuilt,
+  // redeployed server was invisible to any browser that had already cached
+  // the old file) is worse than an extra network round-trip. Cache is only
+  // a fallback for genuine offline access, always refreshed on success.
   event.respondWith(
-    caches.match(event.request).then(
-      (cached) =>
-        cached ||
-        fetch(event.request).then((res) => {
-          const copy = res.clone();
-          caches.open(SHELL_CACHE).then((cache) => cache.put(event.request, copy));
-          return res;
-        }),
-    ),
+    fetch(event.request)
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(SHELL_CACHE).then((cache) => cache.put(event.request, copy));
+        return res;
+      })
+      .catch(() => caches.match(event.request)),
   );
 });
