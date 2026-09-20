@@ -90,6 +90,12 @@ th, td {
   border-bottom: 1px solid var(--border);
 }
 
+tfoot td {
+  border-bottom: none;
+  border-top: 2px solid var(--border);
+  padding-top: 6px;
+}
+
 th {
   color: var(--muted);
   font-weight: 500;

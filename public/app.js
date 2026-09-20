@@ -30,6 +30,12 @@ function renderLineup(view) {
     .map((p) => `${escapeHtml(p.name)} (${fmt1(p.projectedPoints)})`)
     .join(", ");
 
+  const anyLocked = view.plan.assignments.some((a) => a.player && a.player.locked);
+  const liveTotal = view.plan.assignments.reduce(
+    (sum, a) => sum + (a.player && a.player.locked && a.player.livePoints !== undefined ? a.player.livePoints : 0),
+    0,
+  );
+
   // A submit is only actually needed when the *set* of starters changes.
   // diffLineup still lists pure slot-label reshuffles among the same
   // starters (RB <-> W/R/T) in `changes` for completeness, but those aren't
@@ -64,8 +70,11 @@ function renderLineup(view) {
     : "";
 
   return `
-    <table><thead><tr><th>Slot</th><th>Player</th><th>Proj</th><th>Score</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
-    <p><strong>Total: ${fmt1(view.plan.totalProjected)}</strong></p>
+    <table>
+      <thead><tr><th>Slot</th><th>Player</th><th>Proj</th><th>Score</th><th>Status</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot><tr><td></td><td><strong>Total</strong></td><td><strong>${fmt1(view.plan.totalProjected)}</strong></td><td><strong>${anyLocked ? fmt1(liveTotal) : ""}</strong></td><td></td></tr></tfoot>
+    </table>
     ${bench ? `<p class="muted">Bench: ${bench}</p>` : ""}
     ${changes}
     ${adjustments}`;
