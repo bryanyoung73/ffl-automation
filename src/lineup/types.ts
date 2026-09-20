@@ -36,6 +36,16 @@ export interface Player {
    *  (a locked player is an immovable constraint, like a bye), so no proposed
    *  move touches him and the submit isn't rejected. ESPN only for now. */
   locked?: boolean;
+  /**
+   * ISO kickoff time for this player's game this week, when known (from
+   * ESPN's public scoreboard — provider-agnostic, attached by the CLI/server
+   * layer, not any one LeagueProvider). Used only to break ties among
+   * assignments that already achieve the same optimal total: among
+   * equally-valid labelings, the optimizer prefers holding the later-kickoff
+   * (and, first, the injury-flagged) player in the flex slot. Never changes
+   * which players start or the total.
+   */
+  kickoffAt?: string;
 }
 
 /** What a provider returns from a roster read: the players plus the current

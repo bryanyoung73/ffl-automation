@@ -10,7 +10,18 @@ TypeScript automation for a fantasy football team, against Yahoo or ESPN
    Shipped, verified live (pre-draft only).
 2. **Weekly lineup optimizer** (`npm run roster` / `npm run lineup`) — verified
    live read-side on Yahoo; the real submit and the ESPN roster path are not
-   yet exercised (see Current status).
+   yet exercised (see Current status). `optimizeLineup` maximizes total
+   projected points (never trades a point away), but among slot-labelings
+   that already tie on that total — the same starters, just ambiguous which
+   one is "RB2" vs "FLEX" — it prefers holding whichever player kicks off
+   *latest* in the flex slot (`src/lineup/optimizer.ts`, `preferCandidate`).
+   Injury status is deliberately not a separate priority — an injured player
+   with an early kickoff is fine in a dedicated slot; only kickoff time
+   orders the tie (an injured player who also happens to be the latest
+   kickoff still lands in flex, but only because of the timing, not the
+   injury). Kickoff times come from ESPN's public scoreboard via
+   `src/lineup/kickoff.ts` (`attachKickoffTimes`, provider-agnostic, never
+   throws — degrades to the old deterministic tiebreak if unavailable).
 3. **Waiver wire** (`npm run waivers`, ESPN + Sleeper) — ranks free agents +
    your bench by a blended value (ROS + this week + buzz), pairs adds with legal
    drops, lists DEF/K streams. ROS value blends the active provider's season
@@ -164,6 +175,8 @@ src/
     DraftRankingsPage.ts    editprerank scrape (verified pre-draft; 404s post-draft)
   lineup/
     optimizer.ts       PURE branch-and-bound lineup optimizer, unit-tested
+    kickoff.ts         attachKickoffTimes — ESPN scoreboard -> Player.kickoffAt
+                       (feeds the optimizer's flex tie-break; never throws)
     types.ts
   draft/
     board.ts           PURE cheat-sheet builder (ADP order, tiers, flags,

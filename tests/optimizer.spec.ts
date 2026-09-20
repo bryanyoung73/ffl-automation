@@ -14,6 +14,7 @@ function player(overrides: Partial<Player> & Pick<Player, "position" | "projecte
     projectedPoints: overrides.projectedPoints,
     status: (overrides.status ?? "OK") as PlayerStatus,
     currentSlot: overrides.currentSlot ?? "BN",
+    kickoffAt: overrides.kickoffAt,
   };
 }
 
@@ -89,6 +90,61 @@ test("fills flex with the best leftover RB/WR/TE", () => {
   const flex = plan.assignments.find((a) => a.slot.code === "W/R/T");
   expect(flex?.player?.name).toBe("WR2");
   expect(plan.totalProjected).toBe(55);
+});
+
+test("among tied slot-labelings, flex prefers whichever player kicks off later — injury status alone doesn't decide", () => {
+  // An injured player with an EARLY kickoff is fine in a dedicated slot: his
+  // status will be resolved (game over, or he's confirmed active/inactive)
+  // well before the later game matters. Only kickoff time orders the tie.
+  const players = [
+    player({ id: "hurt-early", name: "Early Questionable RB", position: "RB", projectedPoints: 17, status: "Q", kickoffAt: "2026-09-21T17:00Z" }),
+    player({ id: "healthy-late", name: "Late Healthy RB", position: "RB", projectedPoints: 17, kickoffAt: "2026-09-21T20:20Z" }),
+  ];
+  const plan = optimizeLineup(players, ["RB", "W/R/T"]);
+  const flex = plan.assignments.find((a) => a.slot.code === "W/R/T");
+  const rbSlot = plan.assignments.find((a) => a.slot.code === "RB");
+  expect(flex?.player?.name).toBe("Late Healthy RB");
+  expect(rbSlot?.player?.name).toBe("Early Questionable RB");
+  expect(plan.totalProjected).toBe(34); // unchanged either way -- no point cost
+});
+
+test("among tied slot-labelings, flex prefers whichever player kicks off later, regardless of injury", () => {
+  const players = [
+    player({ id: "early", name: "Early Game RB", position: "RB", projectedPoints: 17, kickoffAt: "2026-09-21T13:00Z" }),
+    player({ id: "late", name: "Late Game RB", position: "RB", projectedPoints: 17, kickoffAt: "2026-09-21T20:20Z" }),
+  ];
+  const plan = optimizeLineup(players, ["RB", "W/R/T"]);
+  const flex = plan.assignments.find((a) => a.slot.code === "W/R/T");
+  expect(flex?.player?.name).toBe("Late Game RB");
+  expect(plan.totalProjected).toBe(34);
+});
+
+test("an injured player who also has the later kickoff still lands in flex", () => {
+  const players = [
+    player({ id: "early-healthy", name: "Early Healthy RB", position: "RB", projectedPoints: 17, kickoffAt: "2026-09-21T13:00Z" }),
+    player({ id: "late-hurt", name: "Late Questionable RB", position: "RB", projectedPoints: 17, status: "Q", kickoffAt: "2026-09-21T20:20Z" }),
+  ];
+  const plan = optimizeLineup(players, ["RB", "W/R/T"]);
+  const flex = plan.assignments.find((a) => a.slot.code === "W/R/T");
+  expect(flex?.player?.name).toBe("Late Questionable RB");
+});
+
+test("flex preference never costs a point — it only breaks ties within the already-optimal starting set", () => {
+  // A (25) and C (20) are the value-max pair; B (10, later kickoff) is
+  // strictly worse than both and must NOT get pulled into flex just because
+  // he'd otherwise win the kickoff tie-break -- that would cost 10 real
+  // points (45 -> 35).
+  const players = [
+    player({ id: "a", name: "Best RB", position: "RB", projectedPoints: 25 }),
+    player({ id: "b", name: "Later-Kickoff Worse RB", position: "RB", projectedPoints: 10, kickoffAt: "2026-09-21T20:20Z" }),
+    player({ id: "c", name: "Second Best RB", position: "RB", projectedPoints: 20 }),
+  ];
+  const plan = optimizeLineup(players, ["RB", "W/R/T"]);
+  const starters = plan.assignments.map((a) => a.player?.name);
+  expect(starters).toContain("Best RB");
+  expect(starters).toContain("Second Best RB");
+  expect(starters).not.toContain("Later-Kickoff Worse RB");
+  expect(plan.totalProjected).toBe(45);
 });
 
 test("global optimum beats naive slot-by-slot greedy", () => {

@@ -1,6 +1,7 @@
 import { loadConfig } from "../config.js";
 import { getProvider, providerLabel } from "../providers/index.js";
 import { diffLineup, optimizeLineup, slotLabel } from "../lineup/optimizer.js";
+import { attachKickoffTimes } from "../lineup/kickoff.js";
 import { confirm, hasFlag } from "./prompt.js";
 import { applyWeeklyIntel, formatAdjustments } from "../intel/weekly.js";
 
@@ -30,12 +31,16 @@ async function main(): Promise<void> {
       throw new Error("No starting slots detected — cannot optimize. Check `npm run roster`.");
     }
 
-    const { players, adjustments, fetchedAt, skipped } = await applyWeeklyIntel(config, rawPlayers, {
+    const { players: intelPlayers, adjustments, fetchedAt, skipped } = await applyWeeklyIntel(config, rawPlayers, {
       skip: hasFlag("no-intel"),
       force: hasFlag("refresh"),
       llm: hasFlag("llm"),
       week: resolvedWeek,
     });
+
+    // For the optimizer's flex-slot tie-break only (see optimizer.ts) — never
+    // affects projections or which players start, only labeling among ties.
+    const players = await attachKickoffTimes(config, intelPlayers, resolvedWeek);
 
     // A locked player (game already started) can't move — pin him so the
     // optimizer works around him instead of proposing a change the provider

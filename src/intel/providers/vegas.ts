@@ -41,8 +41,10 @@ export interface GameContext {
 
 interface RawScoreboard {
   events?: Array<{
+    date?: string;
     weather?: { displayValue?: string; temperature?: number };
     competitions?: Array<{
+      date?: string;
       competitors?: Array<{ homeAway?: string; team?: { abbreviation?: string } }>;
       odds?: Array<{ overUnder?: number; spread?: number }>;
     }>;
@@ -103,6 +105,44 @@ export function parseScoreboard(raw: RawScoreboard): Map<string, GameContext> {
   return out;
 }
 
+function scoreboardUrl(season: number, week: number): string {
+  const params = new URLSearchParams({ seasontype: "2", dates: String(season) });
+  if (week > 0) params.set("week", String(week));
+  return `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?${params}`;
+}
+
+async function fetchScoreboard(cacheDir: string, season: number, week: number): Promise<RawScoreboard | undefined> {
+  return cachedJson<RawScoreboard>(cacheDir, `espn-scoreboard-${season}-wk${week}.json`, scoreboardUrl(season, week), {
+    ttlMs: SCOREBOARD_TTL_MS,
+  });
+}
+
+/**
+ * Pure: scoreboard JSON -> per-team kickoff time (ISO). Deliberately doesn't
+ * require odds — the schedule is set well before betting lines post, and the
+ * lineup optimizer's flex-slot preference (src/lineup/optimizer.ts) needs
+ * kickoff times even when `parseScoreboard` would skip an odds-less event.
+ */
+export function parseKickoffTimes(raw: RawScoreboard): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const ev of raw.events ?? []) {
+    const comp = ev.competitions?.[0];
+    const kickoff = comp?.date ?? ev.date;
+    if (!comp || !kickoff) continue;
+    for (const c of comp.competitors ?? []) {
+      const team = teamCode(c.team?.abbreviation);
+      if (team) out.set(team, kickoff);
+    }
+  }
+  return out;
+}
+
+/** Per-team kickoff time for the week, keyed by team abbreviation. Same cache
+ *  as the Vegas signal — usually served from disk, not a second network hit. */
+export function fetchKickoffTimes(cacheDir: string, season: number, week: number): Promise<Map<string, string>> {
+  return fetchScoreboard(cacheDir, season, week).then((raw) => (raw ? parseKickoffTimes(raw) : new Map()));
+}
+
 const clampImpact = (n: number): number => Math.max(-2, Math.min(2, round1(n)));
 
 /** Pure: a game context + position -> this week's Vegas bump. */
@@ -147,15 +187,7 @@ export const vegasProvider: IntelProvider = {
   async collect(ctx: IntelContext): Promise<Map<string, PartialIntel>> {
     const out = new Map<string, PartialIntel>();
 
-    const params = new URLSearchParams({ seasontype: "2", dates: String(ctx.season) });
-    if (ctx.week > 0) params.set("week", String(ctx.week));
-    const url = `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?${params}`;
-    const raw = await cachedJson<RawScoreboard>(
-      ctx.cacheDir,
-      `espn-scoreboard-${ctx.season}-wk${ctx.week}.json`,
-      url,
-      { ttlMs: SCOREBOARD_TTL_MS },
-    );
+    const raw = await fetchScoreboard(ctx.cacheDir, ctx.season, ctx.week);
     if (!raw) return out;
 
     const games = parseScoreboard(raw);

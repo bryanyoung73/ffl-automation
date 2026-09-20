@@ -3,6 +3,7 @@ import {
   impliedTotals,
   weatherBadness,
   parseScoreboard,
+  parseKickoffTimes,
   vegasImpact,
 } from "../src/intel/providers/vegas.js";
 
@@ -69,6 +70,49 @@ test("parseScoreboard skips games with no posted odds", () => {
     events: [
       { competitions: [{ competitors: [{ homeAway: "home", team: { abbreviation: "NYJ" } }], odds: [] }] },
     ],
+  });
+  expect(g.size).toBe(0);
+});
+
+test("parseKickoffTimes reads a per-team kickoff even when odds haven't posted yet", () => {
+  // Real need: the lineup optimizer's flex tie-break (src/lineup/optimizer.ts)
+  // needs kickoff times all week, not just once betting lines are up.
+  const g = parseKickoffTimes({
+    events: [
+      {
+        date: "2026-09-20T17:00Z",
+        competitions: [
+          {
+            competitors: [
+              { homeAway: "home", team: { abbreviation: "ATL" } },
+              { homeAway: "away", team: { abbreviation: "CAR" } },
+            ],
+            odds: [],
+          },
+        ],
+      },
+      {
+        competitions: [
+          {
+            date: "2026-09-21T20:20Z",
+            competitors: [
+              { homeAway: "home", team: { abbreviation: "KC" } },
+              { homeAway: "away", team: { abbreviation: "BUF" } },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+  expect(g.get("ATL")).toBe("2026-09-20T17:00Z");
+  expect(g.get("CAR")).toBe("2026-09-20T17:00Z");
+  expect(g.get("KC")).toBe("2026-09-21T20:20Z");
+  expect(g.get("BUF")).toBe("2026-09-21T20:20Z");
+});
+
+test("parseKickoffTimes skips events with no usable date", () => {
+  const g = parseKickoffTimes({
+    events: [{ competitions: [{ competitors: [{ homeAway: "home", team: { abbreviation: "NYJ" } }] }] }],
   });
   expect(g.size).toBe(0);
 });

@@ -3,6 +3,7 @@ import { getProvider } from "../providers/index.js";
 import { applyWeeklyIntel } from "../intel/weekly.js";
 import { collectIntel } from "../intel/collect.js";
 import { diffLineup, optimizeLineup } from "../lineup/optimizer.js";
+import { attachKickoffTimes } from "../lineup/kickoff.js";
 import type { LineupDiff, LineupPlan } from "../lineup/types.js";
 import type { ProjectionAdjustment } from "../intel/apply.js";
 import { valuePlayers, type ValueInput } from "../waivers/value.js";
@@ -35,7 +36,13 @@ export async function getLineupView(config: Config): Promise<LineupView> {
 
     // Prefer the provider's own resolved current week over config.week (which
     // is usually unset) so the LLM digest doesn't wrongly assume preseason.
-    const { players, adjustments, fetchedAt } = await applyWeeklyIntel(config, rawPlayers, { week: resolvedWeek });
+    const { players: intelPlayers, adjustments, fetchedAt } = await applyWeeklyIntel(config, rawPlayers, {
+      week: resolvedWeek,
+    });
+
+    // For the optimizer's flex-slot tie-break only (see optimizer.ts) — never
+    // affects projections or which players start, only labeling among ties.
+    const players = await attachKickoffTimes(config, intelPlayers, resolvedWeek);
 
     // Mirror set-lineup.ts: a locked player (game already started) can't
     // move — pin him so the optimizer works around him instead of proposing

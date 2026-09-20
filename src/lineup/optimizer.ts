@@ -46,8 +46,10 @@ function slotKey(slot: StartingSlot): string {
  * Branch-and-bound over slots: at each slot try every eligible unused player
  * (and "leave empty"), pruning branches that cannot beat the best full lineup
  * found so far. Rosters are tiny (~15 players / ~10 slots) so this is instant
- * and always returns the true optimum. Ties break by lower player name then id,
- * so results are deterministic.
+ * and always returns the true optimum. Among assignments tied on total value,
+ * the flex slot prefers whoever kicks off latest (see `preferCandidate`);
+ * any remaining tie breaks by lower player name then id, so results are
+ * deterministic.
  */
 export function optimizeLineup(
   players: readonly Player[],
@@ -116,6 +118,28 @@ export function optimizeLineup(
     return total;
   }
 
+  // Among slot assignments that tie on total points (the same final set of
+  // starters just has more than one valid slot-labeling — e.g. two RBs could
+  // swap which one is "RB2" and which is "FLEX" for identical value), prefer
+  // holding whichever kicks off LATEST in the flex slot — he's the one worth
+  // reconsidering last, closest to kickoff. Injury status is not a separate,
+  // higher-priority key: an injured player with an early kickoff is fine in a
+  // dedicated slot (his status will be resolved before a later game matters
+  // anyway); only kickoff time orders the tie. This never costs a point — it
+  // only decides among already-optimal ties.
+  function flexPriority(p: Player | undefined): string {
+    return p?.kickoffAt ?? "";
+  }
+  function preferCandidate(candidate: (number | null)[], current: (number | null)[]): boolean {
+    for (let idx = 0; idx < slots.length; idx++) {
+      if (slots[idx]!.code !== "W/R/T") continue;
+      const a = flexPriority(candidate[idx] == null ? undefined : startable[candidate[idx]!]);
+      const b = flexPriority(current[idx] == null ? undefined : startable[current[idx]!]);
+      if (a !== b) return a > b;
+    }
+    return false;
+  }
+
   let bestScore = -Infinity;
   let bestPick: (number | null)[] = slots.map(() => null);
 
@@ -124,13 +148,15 @@ export function optimizeLineup(
 
   function dfs(slotIdx: number, score: number): void {
     if (slotIdx === slots.length) {
-      if (score > bestScore) {
+      if (score > bestScore || (score === bestScore && preferCandidate(pick, bestPick))) {
         bestScore = score;
         bestPick = [...pick];
       }
       return;
     }
-    if (score + bound(slotIdx, used) <= bestScore) return;
+    // Ties must still be explored (not just beats) so preferCandidate ever
+    // gets a second, equally-optimal assignment to compare against.
+    if (score + bound(slotIdx, used) < bestScore) return;
 
     const force = forced.get(slotIdx);
     const options_ = force !== undefined ? [force] : candidates[slotIdx]!;
