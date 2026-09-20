@@ -92,3 +92,17 @@ open that on the phone and "Add to Home Screen" becomes available.
 - The `tailscale serve` HTTPS step is manual and one-time; this repo has no
   way to run it on the user's behalf.
 - No new npm dependencies.
+
+## Addendum — 2026-09-20: cosmetic slot swaps looked like real recommendations
+
+Live bug: the dashboard showed a "Proposed changes" table for a pure
+slot-label reshuffle between two players *already both starting* (e.g.
+Ashton Jeanty RB<->W/R/T with Bucky Irving, same total points) — confusing,
+since nothing actually needed submitting. `set-lineup.ts` has always guarded
+this correctly via `diff.needsSubmit` (`LineupDiff.needsSubmit` is false
+when the *set* of starters is unchanged, even if `changes` still lists the
+label swaps), but `public/app.js`'s `renderLineup` only checked whether
+`diff.changes.length` was nonzero, never `needsSubmit`. Fixed to branch on
+`needsSubmit` exactly like the CLI, with the same "cosmetic slot swaps,
+nothing to submit" wording when `changes` is non-empty but no real submit
+is needed.

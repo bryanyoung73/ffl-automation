@@ -27,8 +27,13 @@ function renderLineup(view) {
     .map((p) => `${escapeHtml(p.name)} (${fmt1(p.projectedPoints)})`)
     .join(", ");
 
+  // A submit is only actually needed when the *set* of starters changes.
+  // diffLineup still lists pure slot-label reshuffles among the same
+  // starters (RB <-> W/R/T) in `changes` for completeness, but those aren't
+  // real recommendations -- needsSubmit is what set-lineup.ts itself gates
+  // on, so the dashboard must match it rather than keying off changes.length.
   let changes = "";
-  if (view.diff.changes.length) {
+  if (view.diff.needsSubmit) {
     const changeRows = view.diff.changes
       .map(
         (c) =>
@@ -40,6 +45,8 @@ function renderLineup(view) {
       <table><thead><tr><th>Player</th><th>From</th><th>To</th><th>Proj</th></tr></thead><tbody>${changeRows}</tbody></table>
       <p>Projected: ${fmt1(view.diff.currentProjected)} &rarr; ${fmt1(view.diff.proposedProjected)}
         (${view.diff.delta >= 0 ? "+" : ""}${fmt1(view.diff.delta)})</p>`;
+  } else if (view.diff.changes.length) {
+    changes = `<p class="muted">Lineup is already optimal (proposed moves are cosmetic slot swaps). Nothing to submit.</p>`;
   } else {
     changes = `<p class="muted">Lineup is already optimal. Nothing to do.</p>`;
   }
