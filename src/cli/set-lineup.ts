@@ -103,6 +103,8 @@ function printPlan(plan: ReturnType<typeof optimizeLineup>, slotCodes: string[])
       Slot: slotLabel(a.slot),
       Player: a.player?.name ?? "— empty —",
       Proj: a.player ? a.player.projectedPoints.toFixed(1) : "",
+      // Once locked, the projection is stale -- show his real game score.
+      Score: a.player?.locked && a.player.livePoints !== undefined ? a.player.livePoints.toFixed(1) : "",
       Status: a.player && a.player.status !== "OK" ? a.player.status : "",
     })),
   );

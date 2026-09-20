@@ -42,10 +42,16 @@ export interface Player {
    * layer, not any one LeagueProvider). Used only to break ties among
    * assignments that already achieve the same optimal total: among
    * equally-valid labelings, the optimizer prefers holding the later-kickoff
-   * (and, first, the injury-flagged) player in the flex slot. Never changes
-   * which players start or the total.
+   * player in the flex slot. Never changes which players start or the total.
    */
   kickoffAt?: string;
+  /**
+   * Actual fantasy points scored THIS WEEK — live while his game is in
+   * progress, final once it ends. Meaningful only once `locked` is true;
+   * ESPN only for now. Display-only (`show-roster.ts`, `set-lineup.ts`, the
+   * dashboard) — the optimizer keeps using `projectedPoints`.
+   */
+  livePoints?: number;
 }
 
 /** What a provider returns from a roster read: the players plus the current

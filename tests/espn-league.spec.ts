@@ -38,6 +38,7 @@ test("mapRosterEntry maps a starter with a weekly projection", () => {
     status: "OK",
     currentSlot: "QB",
     locked: true, // playerPoolEntry.lineupLocked — his game has started
+    livePoints: 0, // statSourceId 0 row for week 1 -- locked, hasn't scored yet
   });
   // an entry without the flag is not locked
   expect(mapRosterEntry(entries[1]!, 1).locked).toBe(false);

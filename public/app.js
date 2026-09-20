@@ -17,9 +17,12 @@ function renderLineup(view) {
   const rows = view.plan.assignments
     .map((a) => {
       const p = a.player;
-      if (!p) return `<tr><td>${escapeHtml(a.slot.code)}</td><td class="muted">— empty —</td><td></td><td></td></tr>`;
+      if (!p) return `<tr><td>${escapeHtml(a.slot.code)}</td><td class="muted">— empty —</td><td></td><td></td><td></td></tr>`;
       const status = p.locked ? "LOCK" : p.status !== "OK" ? escapeHtml(p.status) : "";
-      return `<tr><td>${escapeHtml(a.slot.code)}</td><td>${escapeHtml(p.name)}</td><td>${fmt1(p.projectedPoints)}</td><td>${status}</td></tr>`;
+      // Once locked, the projection is stale -- his real game score (live,
+      // then final) is what actually matters.
+      const score = p.locked && p.livePoints !== undefined ? fmt1(p.livePoints) : "";
+      return `<tr><td>${escapeHtml(a.slot.code)}</td><td>${escapeHtml(p.name)}</td><td>${fmt1(p.projectedPoints)}</td><td>${score}</td><td>${status}</td></tr>`;
     })
     .join("");
 
@@ -61,7 +64,7 @@ function renderLineup(view) {
     : "";
 
   return `
-    <table><thead><tr><th>Slot</th><th>Player</th><th>Proj</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
+    <table><thead><tr><th>Slot</th><th>Player</th><th>Proj</th><th>Score</th><th>Status</th></tr></thead><tbody>${rows}</tbody></table>
     <p><strong>Total: ${fmt1(view.plan.totalProjected)}</strong></p>
     ${bench ? `<p class="muted">Bench: ${bench}</p>` : ""}
     ${changes}

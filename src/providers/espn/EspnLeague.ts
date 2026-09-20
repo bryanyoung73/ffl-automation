@@ -14,6 +14,7 @@ import {
   slotCode,
   draftBoardFilter,
   weeklyProjectedPoints,
+  weeklyActualPoints,
   seasonProjectedPoints,
   actualSeasonPoints,
   type ScoringKind,
@@ -158,6 +159,7 @@ export function mapRosterEntry(entry: RosterEntry, week: number, season?: number
     seasonProjectedPoints: seasonProjectedPoints(p.stats, season),
     pointsSoFar: season != null ? actualSeasonPoints(p.stats, season) : 0,
     locked: entry.playerPoolEntry?.lineupLocked === true,
+    livePoints: weeklyActualPoints(p.stats, week),
   };
 }
 

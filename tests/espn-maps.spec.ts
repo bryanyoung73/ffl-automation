@@ -8,6 +8,7 @@ import {
   detectScoring,
   rankTypeForScoring,
   weeklyProjectedPoints,
+  weeklyActualPoints,
   seasonProjectedPoints,
   draftBoardFilter,
 } from "../src/providers/espn/maps.js";
@@ -83,6 +84,12 @@ test("projected-points extractors pick the right stat split", () => {
   expect(weeklyProjectedPoints(stats, 9)).toBe(0);
   expect(weeklyProjectedPoints(undefined, 3)).toBe(0);
   expect(seasonProjectedPoints(stats)).toBe(250.4);
+
+  // Live/final score once locked (statSourceId 0) is a separate stat row
+  // from the projection (statSourceId 1) for the same week.
+  expect(weeklyActualPoints(stats, 3)).toBe(19.9);
+  expect(weeklyActualPoints(stats, 4)).toBe(0); // no actual row posted for week 4 yet
+  expect(weeklyActualPoints(undefined, 3)).toBe(0);
 });
 
 test("draftBoardFilter is valid JSON with a limit and sort", () => {

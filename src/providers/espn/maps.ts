@@ -170,6 +170,22 @@ export function weeklyProjectedPoints(
   return hit?.appliedTotal ?? 0;
 }
 
+/**
+ * Actual fantasy points scored THIS WEEK (`statSourceId === 0`, matching
+ * `scoringPeriodId`) — live while his game is in progress, final once it
+ * ends, 0 before it starts. Paired with `Player.locked` to show a real score
+ * once a player can no longer move (see set-lineup.ts / show-roster.ts).
+ */
+export function weeklyActualPoints(
+  stats: readonly StatEntry[] | null | undefined,
+  week: number,
+): number {
+  const hit = stats?.find(
+    (s) => s.statSourceId === 0 && s.scoringPeriodId === week,
+  );
+  return hit?.appliedTotal ?? 0;
+}
+
 /** Projected fantasy points for the full season (statSplitTypeId 0). */
 export function seasonProjectedPoints(
   stats: readonly StatEntry[] | null | undefined,

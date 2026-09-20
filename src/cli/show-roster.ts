@@ -34,6 +34,9 @@ async function main(): Promise<void> {
         Pos: p.position,
         Team: p.team,
         Proj: p.projectedPoints.toFixed(1),
+        // Once a player is locked, the projection is stale — his real game
+        // score (live, then final) is what actually matters.
+        Score: p.locked && p.livePoints !== undefined ? p.livePoints.toFixed(1) : "",
         Status: p.locked ? "LOCK" : p.status === "OK" ? "" : p.status,
       }));
 
