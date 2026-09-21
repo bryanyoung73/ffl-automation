@@ -31,6 +31,10 @@ services:
       # rebuild throws it away and the next page load re-runs the LLM digest
       # for every player from scratch. Persisting it keeps that a one-time cost.
       - app-cache:/app/.cache
+      # Recommendation-tracking history (data/) — real season data, not
+      # disposable cache. A separate volume so nothing that prunes app-cache
+      # ever touches it.
+      - tracking-data:/app/data
     depends_on:
       - tailscale
     restart: unless-stopped
@@ -38,3 +42,4 @@ services:
 volumes:
   tailscale-state:
   app-cache:
+  tracking-data:

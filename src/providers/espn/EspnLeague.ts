@@ -347,6 +347,25 @@ export class EspnLeague implements LeagueProvider {
     return { players, startingSlotCodes: startingSlotCodes(raw), week: targetWeek };
   }
 
+  async getWeekResult(week: number): Promise<RosterReadResult> {
+    // The real fix `getRoster` doesn't make: send `scoringPeriodId` on the
+    // *fetch itself*, not just to `mapRosterEntry` afterward -- otherwise
+    // ESPN just returns the CURRENT roster/lineup-slot state re-labeled with
+    // that week's stats, not what was actually started that week.
+    const raw = await this.client.get<LeagueResponse>(["mRoster", "mSettings"], {
+      params: { forTeamId: this.espn.teamId, scoringPeriodId: week },
+    });
+    const team = (raw.teams ?? []).find((t) => t.id === this.espn.teamId);
+    if (!team) {
+      throw new Error(
+        `ESPN league has no team id ${this.espn.teamId}. Check ESPN_TEAM_ID in .env.`,
+      );
+    }
+    const entries = team.roster?.entries ?? [];
+    const players = entries.map((e) => mapRosterEntry(e, week, this.espn.season));
+    return { players, startingSlotCodes: startingSlotCodes(raw), week };
+  }
+
   async getFreeAgents(week?: number): Promise<FreeAgent[]> {
     const targetWeek = week ?? this.week ?? (await this.currentScoringPeriod());
     const filter = JSON.stringify({

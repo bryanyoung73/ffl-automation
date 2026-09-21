@@ -220,6 +220,15 @@ src/
     prompt.ts
   waivers/             types.ts + value.ts (PURE blend) + pairs.ts (PURE
                        add/drop pairing, protection rules, streaming)
+  tracking/            recommendation-tracking (spec 2026-09-21, phase 1 of 4
+                       shipped): store.ts (append-only per-season snapshot
+                       log, data/tracking/<season>.json, deliberately NOT
+                       under .cache/) + collect.ts (buildSnapshot PURE,
+                       recordSnapshot wraps it — called from set-lineup.ts
+                       and server/data.ts on every computed plan). Grading
+                       against LeagueProvider.getWeekResult() (ESPN only —
+                       the true historical per-week lineup slot, not the
+                       current one relabeled) is phase 2, not started.
   server/              data.ts (getLineupView/getWaiverView — reuse the
                        lineup/waivers pipelines, no writes) + http.ts
                        (node:http; /api/lineup, /api/waivers, static `public/`)

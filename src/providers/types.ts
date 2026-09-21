@@ -53,6 +53,14 @@ export interface LeagueProvider {
   getRoster(week?: number): Promise<RosterReadResult>;
   /** Available players (free agents + waivers) with week/season projections. */
   getFreeAgents(week?: number): Promise<FreeAgent[]>;
+  /**
+   * The TRUE historical roster/lineup-slot state for a completed past week
+   * (not the current roster re-labeled with that week's stats — a real
+   * per-week snapshot, e.g. a since-IR'd player's actual starting slot that
+   * week). Powers recommendation-tracking grading (`src/tracking/`).
+   * ESPN only for now — other providers reject with a clear error.
+   */
+  getWeekResult(week: number): Promise<RosterReadResult>;
   /** Push a computed lineup. `dryRun` computes/validates but never writes. */
   applyLineup(plan: LineupPlan, opts: { dryRun: boolean }): Promise<void>;
   /** Release any resources (browser, sockets). Safe to call more than once. */

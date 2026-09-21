@@ -4,6 +4,7 @@ dist/
 .auth/
 .cache/
 output/
+data/
 artifacts/
 test-results/
 playwright-report/

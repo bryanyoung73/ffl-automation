@@ -118,6 +118,13 @@ export class SleeperLeague implements LeagueProvider {
     };
   }
 
+  async getWeekResult(): Promise<RosterReadResult> {
+    throw new Error(
+      "Recommendation-tracking grading (getWeekResult) isn't implemented for " +
+        "PROVIDER=sleeper yet. Switch to PROVIDER=espn to use npm run track:review.",
+    );
+  }
+
   async getFreeAgents(week?: number): Promise<FreeAgent[]> {
     const leagueId = this.requireLeague("Waiver-wire analysis");
     const [league, rosters, dump, wk, trending] = await Promise.all([

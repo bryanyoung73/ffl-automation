@@ -4,6 +4,7 @@ import { diffLineup, optimizeLineup, slotLabel } from "../lineup/optimizer.js";
 import { attachKickoffTimes } from "../lineup/kickoff.js";
 import { confirm, hasFlag } from "./prompt.js";
 import { applyWeeklyIntel, formatAdjustments } from "../intel/weekly.js";
+import { recordSnapshot } from "../tracking/collect.js";
 
 /**
  * Optimize this week's starting lineup from projections (nudged by chatter/news
@@ -59,6 +60,10 @@ async function main(): Promise<void> {
 
     const plan = optimizeLineup(players, startingSlotCodes, { pinnedPlayerIds });
     const diff = diffLineup(players, plan);
+
+    // The recommendation existed the moment it was computed, whether or not
+    // it's acted on — record it for later grading (npm run track:review).
+    recordSnapshot(config, resolvedWeek, plan);
 
     printPlan(plan, startingSlotCodes);
     printDiff(diff);

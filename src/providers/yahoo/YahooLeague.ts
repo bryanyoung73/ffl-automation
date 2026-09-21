@@ -62,6 +62,13 @@ export class YahooLeague implements LeagueProvider {
     );
   }
 
+  async getWeekResult(): Promise<never> {
+    throw new Error(
+      "Recommendation-tracking grading (getWeekResult) isn't implemented for " +
+        "PROVIDER=yahoo yet. Switch to PROVIDER=espn to use npm run track:review.",
+    );
+  }
+
   async applyLineup(plan: LineupPlan, opts: { dryRun: boolean }): Promise<void> {
     const { page } = await this.ensureSession();
     const lineup = new LineupPage(page, this.config);

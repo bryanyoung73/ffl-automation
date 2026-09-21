@@ -4,6 +4,7 @@ import { applyWeeklyIntel } from "../intel/weekly.js";
 import { collectIntel } from "../intel/collect.js";
 import { diffLineup, optimizeLineup } from "../lineup/optimizer.js";
 import { attachKickoffTimes } from "../lineup/kickoff.js";
+import { recordSnapshot } from "../tracking/collect.js";
 import type { LineupDiff, LineupPlan } from "../lineup/types.js";
 import type { ProjectionAdjustment } from "../intel/apply.js";
 import { valuePlayers, type ValueInput } from "../waivers/value.js";
@@ -51,6 +52,10 @@ export async function getLineupView(config: Config): Promise<LineupView> {
 
     const plan = optimizeLineup(players, startingSlotCodes, { pinnedPlayerIds });
     const diff = diffLineup(players, plan);
+
+    // The recommendation existed the moment it was shown, whether or not
+    // it's acted on — record it for later grading (npm run track:review).
+    recordSnapshot(config, resolvedWeek, plan);
 
     return { provider: config.provider, week: config.week ?? resolvedWeek, plan, diff, adjustments, fetchedAt };
   } finally {
