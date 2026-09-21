@@ -4,6 +4,7 @@ import {
   weatherBadness,
   parseScoreboard,
   parseKickoffTimes,
+  parseGameStatus,
   vegasImpact,
 } from "../src/intel/providers/vegas.js";
 
@@ -115,6 +116,36 @@ test("parseKickoffTimes skips events with no usable date", () => {
     events: [{ competitions: [{ competitors: [{ homeAway: "home", team: { abbreviation: "NYJ" } }] }] }],
   });
   expect(g.size).toBe(0);
+});
+
+test("parseGameStatus reports completion per team, for use by recommendation-tracking grading", () => {
+  const g = parseGameStatus({
+    events: [
+      {
+        date: "2026-09-14T17:00Z",
+        competitions: [
+          {
+            status: { type: { completed: true } },
+            competitors: [
+              { homeAway: "home", team: { abbreviation: "ATL" } },
+              { homeAway: "away", team: { abbreviation: "CAR" } },
+            ],
+          },
+        ],
+      },
+      {
+        competitions: [
+          {
+            date: "2026-09-14T20:20Z",
+            status: { type: { completed: false } },
+            competitors: [{ homeAway: "home", team: { abbreviation: "KC" } }],
+          },
+        ],
+      },
+    ],
+  });
+  expect(g.get("ATL")).toEqual({ kickoff: "2026-09-14T17:00Z", completed: true });
+  expect(g.get("KC")).toEqual({ kickoff: "2026-09-14T20:20Z", completed: false });
 });
 
 test("vegasImpact: higher implied total helps, weather + game script nuance by position", () => {

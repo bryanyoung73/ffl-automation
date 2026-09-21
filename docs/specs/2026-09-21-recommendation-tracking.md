@@ -1,8 +1,8 @@
 # Recommendation tracking: were we right?
 
 Date: 2026-09-21
-Status: Phase 1 shipped (recording); phases 2-4 (grading, CLI report,
-dashboard panel) not started
+Status: Phases 1-3 shipped (recording, grading, CLI report); phase 4
+(dashboard panel) not started
 
 ## Addendum — phase 1 shipped
 
@@ -24,6 +24,40 @@ isn't just echoing current state.
 Not yet built: grading (phase 2), the CLI report (phase 3), the dashboard
 panel (phase 4). No data exists to grade against yet regardless — that
 starts accumulating from this point forward.
+
+## Addendum — phase 2 shipped
+
+`src/tracking/grade.ts` (new, pure): `selectRecommendedSnapshot`,
+`gradeWeek`, `summarizeSeason`. Grading compares the **set** of recommended
+player ids against the **set** actually started (`isStartingSlot`, exported
+from `optimizer.ts` for reuse) — deliberately not slot-index-based, since
+which exact "RB2" vs "FLEX" label a player holds is cosmetic (see the
+optimizer's own flex tie-break and the dashboard's needsSubmit fix earlier
+this session); grading on exact position would falsely flag a
+same-players-different-label week as a disagreement. Both totals are real
+scores (`livePoints`), never projections.
+
+`src/intel/providers/vegas.ts` gained `parseGameStatus`/`fetchGameStatus`
+(per-team kickoff **and** completion, from ESPN's scoreboard
+`status.type.completed`) — `parseKickoffTimes` is now a thin wrapper over
+it, unchanged behavior/signature, still used by the optimizer's flex
+tie-break.
+
+`src/tracking/collect.ts` gained `buildSeasonReport(config)`: groups
+recorded snapshots by week, and per week — fetches `getWeekResult` (skip
+with a reason if the provider doesn't support it), checks every actual
+starter's game is `completed` (skip "isn't fully complete yet" if not),
+computes that week's true first lock from the union of every player who
+ever appeared in a snapshot that week, `selectRecommendedSnapshot`, grades,
+and finally `summarizeSeason`s everything gradable.
+
+209 unit tests pass (7 new for grading, 1 for `parseGameStatus`), typecheck
+clean. Verified live: `buildSeasonReport` against the real (currently thin)
+data correctly reported week 2 as ungradeable — its lone snapshot was
+recorded mid-week, after that week's first lock had already passed, so
+there's honestly nothing valid to grade yet — with no errors anywhere in
+the pipeline (`getWeekResult`, `fetchGameStatus`, and grading all ran
+cleanly end-to-end against the real ESPN league).
 
 ## Problem
 
@@ -206,3 +240,19 @@ kickoff-time plumbing needed.
 - "Agreement rate" only checks slot-for-slot player identity, not whether a
   swap was actually reachable (e.g., a player added off waivers mid-week
   wasn't in any snapshot yet) — worth a caveat in the report output.
+
+## Addendum — phase 3 shipped
+
+`renderSeasonReport(report): string` (pure, in `collect.ts` alongside the
+`SeasonReport` type it renders) + `npm run track:review`
+(`src/cli/track-review.ts`, thin — `buildSeasonReport` then print). Per
+week: who won, the margin, agreement count/rate, and — when they
+differ — exactly who was played instead of the recommendation (and what
+each side actually scored), not just an aggregate number. Season summary:
+weeks recommendation/actual/tied, avg agreement, avg delta. Ungraded weeks
+always print their reason, never silently vanish.
+
+212 unit tests pass (3 new for rendering), typecheck clean. Verified live:
+`npm run track:review` against the real (still-thin) data correctly
+printed "No weeks are gradable yet" with week 2's specific skip reason —
+matching `buildSeasonReport`'s direct output exactly.

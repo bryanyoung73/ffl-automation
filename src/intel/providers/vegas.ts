@@ -45,6 +45,7 @@ interface RawScoreboard {
     weather?: { displayValue?: string; temperature?: number };
     competitions?: Array<{
       date?: string;
+      status?: { type?: { completed?: boolean } };
       competitors?: Array<{ homeAway?: string; team?: { abbreviation?: string } }>;
       odds?: Array<{ overUnder?: number; spread?: number }>;
     }>;
@@ -117,30 +118,49 @@ async function fetchScoreboard(cacheDir: string, season: number, week: number): 
   });
 }
 
+export interface GameStatus {
+  kickoff: string;
+  /** Final whistle blown — ESPN's `status.type.completed`. */
+  completed: boolean;
+}
+
 /**
- * Pure: scoreboard JSON -> per-team kickoff time (ISO). Deliberately doesn't
- * require odds — the schedule is set well before betting lines post, and the
- * lineup optimizer's flex-slot preference (src/lineup/optimizer.ts) needs
- * kickoff times even when `parseScoreboard` would skip an odds-less event.
+ * Pure: scoreboard JSON -> per-team kickoff time + completion. Deliberately
+ * doesn't require odds — the schedule is set well before betting lines post,
+ * and both the lineup optimizer's flex-slot preference (kickoff) and
+ * recommendation-tracking grading (completed) need this even when
+ * `parseScoreboard` would skip an odds-less event.
  */
-export function parseKickoffTimes(raw: RawScoreboard): Map<string, string> {
-  const out = new Map<string, string>();
+export function parseGameStatus(raw: RawScoreboard): Map<string, GameStatus> {
+  const out = new Map<string, GameStatus>();
   for (const ev of raw.events ?? []) {
     const comp = ev.competitions?.[0];
     const kickoff = comp?.date ?? ev.date;
     if (!comp || !kickoff) continue;
+    const completed = comp.status?.type?.completed === true;
     for (const c of comp.competitors ?? []) {
       const team = teamCode(c.team?.abbreviation);
-      if (team) out.set(team, kickoff);
+      if (team) out.set(team, { kickoff, completed });
     }
   }
   return out;
+}
+
+/** Pure: scoreboard JSON -> per-team kickoff time (ISO). See `parseGameStatus`. */
+export function parseKickoffTimes(raw: RawScoreboard): Map<string, string> {
+  return new Map([...parseGameStatus(raw)].map(([team, g]) => [team, g.kickoff]));
 }
 
 /** Per-team kickoff time for the week, keyed by team abbreviation. Same cache
  *  as the Vegas signal — usually served from disk, not a second network hit. */
 export function fetchKickoffTimes(cacheDir: string, season: number, week: number): Promise<Map<string, string>> {
   return fetchScoreboard(cacheDir, season, week).then((raw) => (raw ? parseKickoffTimes(raw) : new Map()));
+}
+
+/** Per-team kickoff + completion for the week. Used by recommendation-
+ *  tracking to know when a week is actually done and safe to grade. */
+export function fetchGameStatus(cacheDir: string, season: number, week: number): Promise<Map<string, GameStatus>> {
+  return fetchScoreboard(cacheDir, season, week).then((raw) => (raw ? parseGameStatus(raw) : new Map()));
 }
 
 const clampImpact = (n: number): number => Math.max(-2, Math.min(2, round1(n)));

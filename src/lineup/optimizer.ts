@@ -265,7 +265,10 @@ function baseSlot(slot: string): string {
   return normalizeSlot(slot).replace(/#\d+$/, "");
 }
 
-function isStartingSlot(slot: string): boolean {
+/** A slot other than bench/IR — used by diffLineup and (for grading, see
+ *  src/tracking/grade.ts) to decide which of a roster's players actually
+ *  started. */
+export function isStartingSlot(slot: string): boolean {
   const s = normalizeSlot(slot);
   return s !== "BN" && s !== "IR";
 }

@@ -217,18 +217,25 @@ src/
     intel.ts           `npm run intel` — preview the roster's chatter
     waivers.ts         `npm run waivers` (ESPN) — add/drop recommendations
     serve.ts           `npm run web` — starts the read-only dashboard server
+    track-review.ts    `npm run track:review` — recommendation-tracking report (ESPN only)
     prompt.ts
   waivers/             types.ts + value.ts (PURE blend) + pairs.ts (PURE
                        add/drop pairing, protection rules, streaming)
-  tracking/            recommendation-tracking (spec 2026-09-21, phase 1 of 4
-                       shipped): store.ts (append-only per-season snapshot
-                       log, data/tracking/<season>.json, deliberately NOT
-                       under .cache/) + collect.ts (buildSnapshot PURE,
-                       recordSnapshot wraps it — called from set-lineup.ts
-                       and server/data.ts on every computed plan). Grading
-                       against LeagueProvider.getWeekResult() (ESPN only —
-                       the true historical per-week lineup slot, not the
-                       current one relabeled) is phase 2, not started.
+  tracking/            recommendation-tracking (spec 2026-09-21, phases 1-3
+                       of 4 shipped): store.ts (append-only per-season
+                       snapshot log, data/tracking/<season>.json,
+                       deliberately NOT under .cache/) + grade.ts (PURE:
+                       selectRecommendedSnapshot, gradeWeek — set-based, not
+                       slot-index-based, since exact slot labeling is
+                       cosmetic — summarizeSeason) + collect.ts
+                       (buildSnapshot PURE + recordSnapshot, called from
+                       set-lineup.ts/server/data.ts on every computed plan;
+                       buildSeasonReport orchestrates grading against
+                       LeagueProvider.getWeekResult() — ESPN only, ungraded
+                       weeks say why: not complete yet / no pre-lock
+                       snapshot / provider unsupported; renderSeasonReport
+                       PURE -> `npm run track:review`). Dashboard panel
+                       (phase 4) not started.
   server/              data.ts (getLineupView/getWaiverView — reuse the
                        lineup/waivers pipelines, no writes) + http.ts
                        (node:http; /api/lineup, /api/waivers, static `public/`)
