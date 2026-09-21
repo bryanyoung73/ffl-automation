@@ -115,6 +115,54 @@ function renderWaivers(view) {
   return `${pairs}${streaming}${skipped}`;
 }
 
+function pct(n) {
+  return `${Math.round(n * 100)}%`;
+}
+
+function signed(n) {
+  return `${n >= 0 ? "+" : ""}${fmt1(n)}`;
+}
+
+function renderTrackingWeek(w) {
+  const verdict = w.delta > 0 ? "you beat it" : w.delta < 0 ? "rec. would have won" : "tied";
+  const deviations = [
+    ...w.onlyActual.map((p) => `<span class="add-swap">+ ${escapeHtml(p.name)} (${fmt1(p.points)})</span>`),
+    ...w.onlyRecommended.map((p) => `<span class="drop-swap">- ${escapeHtml(p.name)} (${fmt1(p.points)})</span>`),
+  ].join(" ");
+  return `
+    <tr>
+      <td>${w.week}</td>
+      <td>${fmt1(w.actualTotal)}</td>
+      <td>${fmt1(w.recommendedTotal)}</td>
+      <td>${signed(w.delta)}</td>
+      <td>${w.agreementCount}/${w.recommendedCount} (${pct(w.agreementRate)})</td>
+    </tr>
+    ${deviations ? `<tr class="tracking-deviations"><td></td><td colspan="4">${deviations} <span class="muted">— ${verdict}</span></td></tr>` : ""}`;
+}
+
+function renderTracking(report) {
+  const { summary, skipped } = report;
+
+  const table = summary.weeks.length
+    ? `<table>
+        <thead><tr><th>Week</th><th>You</th><th>Rec</th><th>Delta</th><th>Agreement</th></tr></thead>
+        <tbody>${summary.weeks.map(renderTrackingWeek).join("")}</tbody>
+      </table>
+      <p class="muted">
+        ${summary.weeks.length} week${summary.weeks.length === 1 ? "" : "s"} graded ·
+        rec. better ${summary.weeksRecommendationWasBetter} · you better ${summary.weeksActualWasBetter} ·
+        tied ${summary.weeksTied} · avg agreement ${pct(summary.avgAgreementRate)} ·
+        avg delta ${signed(summary.avgDelta)}/wk
+      </p>`
+    : `<p class="muted">No weeks are gradable yet.</p>`;
+
+  const skippedNote = skipped.length
+    ? `<p class="muted">Not graded yet: ${skipped.map((s) => `week ${s.week} (${escapeHtml(s.reason)})`).join(", ")}</p>`
+    : "";
+
+  return `${table}${skippedNote}`;
+}
+
 async function loadLineup() {
   const el = document.getElementById("lineup-body");
   el.textContent = "Loading…";
@@ -138,15 +186,25 @@ async function loadWaivers() {
   }
 }
 
+async function loadTracking() {
+  const el = document.getElementById("tracking-body");
+  el.textContent = "Loading…";
+  try {
+    const report = await fetchJson("/api/tracking");
+    el.innerHTML = renderTracking(report);
+  } catch (err) {
+    el.innerHTML = `<p class="error">${escapeHtml(err.message)}</p>`;
+  }
+}
+
+const LOADERS = { lineup: loadLineup, waivers: loadWaivers, tracking: loadTracking };
 document.querySelectorAll("[data-refresh]").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    if (btn.dataset.refresh === "lineup") loadLineup();
-    else loadWaivers();
-  });
+  btn.addEventListener("click", () => LOADERS[btn.dataset.refresh]());
 });
 
 loadLineup();
 loadWaivers();
+loadTracking();
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/sw.js").catch(() => {});

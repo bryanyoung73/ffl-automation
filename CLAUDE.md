@@ -37,9 +37,15 @@ TypeScript automation for a fantasy football team, against Yahoo or ESPN
    positional runs). Snake only. See
    `docs/specs/2026-09-03-live-draft-assistant.md`.
 6. **Web dashboard** (`npm run web`) — read-only PWA showing the optimal
-   lineup + waiver suggestions in a browser (meant for a phone over
-   Tailscale). No submit button — display only, reuses 2/3's pipelines
-   verbatim. See `docs/specs/2026-09-14-web-dashboard.md`.
+   lineup + waiver suggestions + recommendation-tracking history in a
+   browser (meant for a phone over Tailscale). No submit button — display
+   only, reuses 2/3/7's pipelines verbatim. See
+   `docs/specs/2026-09-14-web-dashboard.md`.
+7. **Recommendation tracking** (`npm run track:review`, ESPN only) — logs
+   every optimal-lineup recommendation, then grades the last one before each
+   week's first lock against what actually got played (real scores, not
+   projections): season hit rate, points left on the table when they
+   differ. See `docs/specs/2026-09-21-recommendation-tracking.md`.
 
 Stack: `@playwright/test`, `tsx` for CLIs, ESM, strict TS. No framework.
 
@@ -221,8 +227,8 @@ src/
     prompt.ts
   waivers/             types.ts + value.ts (PURE blend) + pairs.ts (PURE
                        add/drop pairing, protection rules, streaming)
-  tracking/            recommendation-tracking (spec 2026-09-21, phases 1-3
-                       of 4 shipped): store.ts (append-only per-season
+  tracking/            recommendation-tracking (spec 2026-09-21, all 4
+                       phases shipped): store.ts (append-only per-season
                        snapshot log, data/tracking/<season>.json,
                        deliberately NOT under .cache/) + grade.ts (PURE:
                        selectRecommendedSnapshot, gradeWeek — set-based, not
@@ -234,12 +240,13 @@ src/
                        LeagueProvider.getWeekResult() — ESPN only, ungraded
                        weeks say why: not complete yet / no pre-lock
                        snapshot / provider unsupported; renderSeasonReport
-                       PURE -> `npm run track:review`). Dashboard panel
-                       (phase 4) not started.
-  server/              data.ts (getLineupView/getWaiverView — reuse the
-                       lineup/waivers pipelines, no writes) + http.ts
-                       (node:http; /api/lineup, /api/waivers, static `public/`)
-public/                dashboard PWA: index.html, app.js, style.css,
+                       PURE -> `npm run track:review` and the dashboard).
+  server/              data.ts (getLineupView/getWaiverView/getTrackingView
+                       — reuse the lineup/waivers/tracking pipelines, no
+                       writes) + http.ts (node:http; /api/lineup,
+                       /api/waivers, /api/tracking, static `public/`)
+public/                dashboard PWA: index.html, app.js (renderLineup,
+                       renderWaivers, renderTracking), style.css,
                        manifest.webmanifest, sw.js, icon.svg — vanilla, no
                        build step, no framework
 tests/

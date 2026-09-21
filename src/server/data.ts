@@ -4,7 +4,7 @@ import { applyWeeklyIntel } from "../intel/weekly.js";
 import { collectIntel } from "../intel/collect.js";
 import { diffLineup, optimizeLineup } from "../lineup/optimizer.js";
 import { attachKickoffTimes } from "../lineup/kickoff.js";
-import { recordSnapshot } from "../tracking/collect.js";
+import { recordSnapshot, buildSeasonReport, type SeasonReport } from "../tracking/collect.js";
 import type { LineupDiff, LineupPlan } from "../lineup/types.js";
 import type { ProjectionAdjustment } from "../intel/apply.js";
 import { valuePlayers, type ValueInput } from "../waivers/value.js";
@@ -136,4 +136,16 @@ export async function getWaiverView(config: Config): Promise<WaiverView> {
   } finally {
     await provider.close();
   }
+}
+
+/**
+ * Season-to-date recommendation-tracking grade — same pipeline as
+ * `npm run track:review` (src/cli/track-review.ts). Provider-safe by
+ * construction: `buildSeasonReport` catches a per-week `getWeekResult`
+ * failure (e.g. PROVIDER=sleeper/yahoo, not supported yet) into that week's
+ * `skipped` reason rather than throwing, so this never needs an
+ * `{unavailable}` branch the way `getWaiverView` does for Yahoo.
+ */
+export function getTrackingView(config: Config): Promise<SeasonReport> {
+  return buildSeasonReport(config);
 }

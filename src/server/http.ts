@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, extname, join, normalize, resolve } from "node:path";
 import { loadConfig } from "../config.js";
-import { getLineupView, getWaiverView } from "./data.js";
+import { getLineupView, getWaiverView, getTrackingView } from "./data.js";
 
 const PUBLIC_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "public");
 
@@ -52,6 +52,11 @@ async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise
     }
     if (url.pathname === "/api/waivers") {
       const view = await getWaiverView(loadConfig());
+      await sendJson(res, 200, view);
+      return;
+    }
+    if (url.pathname === "/api/tracking") {
+      const view = await getTrackingView(loadConfig());
       await sendJson(res, 200, view);
       return;
     }

@@ -1,8 +1,7 @@
 # Recommendation tracking: were we right?
 
 Date: 2026-09-21
-Status: Phases 1-3 shipped (recording, grading, CLI report); phase 4
-(dashboard panel) not started
+Status: All 4 phases shipped (recording, grading, CLI report, dashboard panel)
 
 ## Addendum — phase 1 shipped
 
@@ -256,3 +255,22 @@ always print their reason, never silently vanish.
 `npm run track:review` against the real (still-thin) data correctly
 printed "No weeks are gradable yet" with week 2's specific skip reason —
 matching `buildSeasonReport`'s direct output exactly.
+
+## Addendum — phase 4 shipped
+
+`GET /api/tracking` (`server/http.ts`) → `getTrackingView` (`server/data.ts`,
+a thin pass-through to `buildSeasonReport` — provider-safe by construction,
+since `buildSeasonReport` already turns a per-week `getWeekResult` failure
+into that week's skip reason rather than throwing, so this needed no
+`{unavailable}` branch the way `getWaiverView` does for Yahoo). Third
+dashboard panel (`public/index.html`, `app.js`'s `renderTracking`/
+`renderTrackingWeek`) — a compact week table (You/Rec/Delta/Agreement) with
+an inline deviation line (colored `+`/`-`) under any week that had one,
+the season summary line, and the skipped-weeks note, mirroring
+`renderSeasonReport`'s CLI content in a denser table form.
+
+212 unit tests pass, typecheck clean. Verified live in-browser: the real
+panel correctly shows "No weeks are gradable yet" against today's thin
+data; injected a synthetic multi-week report client-side to confirm the
+table, deviation coloring, summary line, and skipped-week note all render
+correctly once real graded weeks exist.

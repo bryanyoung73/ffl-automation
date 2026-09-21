@@ -127,3 +127,19 @@ th {
 .error {
   color: var(--bad);
 }
+
+.tracking-deviations td {
+  border-bottom: 1px solid var(--border);
+  padding-top: 0;
+  font-size: 13px;
+}
+
+.add-swap {
+  color: var(--good);
+  margin-right: 10px;
+}
+
+.drop-swap {
+  color: var(--bad);
+  margin-right: 10px;
+}
