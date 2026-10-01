@@ -26,7 +26,21 @@ export function mergeIntel(
   for (const [id, parts] of byPlayer) {
     const notes = parts
       .flatMap((p) => p.notes ?? [])
-      .sort((a, b) => (b.asOf ?? "").localeCompare(a.asOf ?? ""));
+      .sort((a, b) => {
+        // Vegas notes get stamped "now" on every single fetch — that's an
+        // artifact of being freshly-computed context, not a sign the
+        // underlying signal (this week's implied total) is more
+        // decision-relevant than an actual injury/depth-chart report dated
+        // to when it really happened. Without this, Vegas (and whichever of
+        // the LLM digest / Vegas merely finishes a few ms later) wins the
+        // recency sort almost every time, burying genuine player news
+        // behind a line that's just weekly matchup context. Non-Vegas notes
+        // always sort first; Vegas only leads when it's all there is.
+        const aVegas = a.source === "vegas" ? 1 : 0;
+        const bVegas = b.source === "vegas" ? 1 : 0;
+        if (aVegas !== bVegas) return aVegas - bVegas;
+        return (b.asOf ?? "").localeCompare(a.asOf ?? "");
+      });
     const seasonImpact = clamp3(parts.reduce((s, p) => s + (p.seasonImpact ?? 0), 0));
     const weekImpact = clamp3(parts.reduce((s, p) => s + (p.weekImpact ?? 0), 0));
     const confidence = Math.max(0, ...parts.map((p) => p.confidence ?? 0));

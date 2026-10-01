@@ -31,6 +31,29 @@ test("mergeIntel sums impacts across providers, clamps to +-3, newest note first
   expect(p1.asOf).toBe("2026-09-11T12:00:00Z");
 });
 
+test("mergeIntel always leads with real player news over a Vegas note, even when Vegas is more recent", () => {
+  // Real bug: Vegas notes get stamped "now" on every fetch, so they'd
+  // otherwise win the recency sort over a genuine (older-dated) injury
+  // report every single time, burying the decision-relevant news.
+  const sleeper = new Map<string, PartialIntel>([
+    ["p1", { notes: [{ text: "Injury: Questionable (Hamstring)", source: "sleeper", horizon: "week", asOf: "2026-09-30T23:15:00Z" }] }],
+  ]);
+  const vegas = new Map<string, PartialIntel>([
+    ["p1", { notes: [{ text: "Implied total 27.0", source: "vegas", horizon: "week", asOf: "2026-10-01T20:30:38Z" }] }],
+  ]);
+  const merged = mergeIntel([sleeper, vegas]);
+  expect(merged.get("p1")!.notes[0]?.source).toBe("sleeper");
+  expect(merged.get("p1")!.notes[1]?.source).toBe("vegas");
+});
+
+test("mergeIntel still surfaces a Vegas note when it's the only thing available", () => {
+  const vegas = new Map<string, PartialIntel>([
+    ["p1", { notes: [{ text: "Implied total 24.0", source: "vegas", horizon: "week", asOf: "2026-10-01T20:30:38Z" }] }],
+  ]);
+  const merged = mergeIntel([vegas]);
+  expect(merged.get("p1")!.notes[0]?.source).toBe("vegas");
+});
+
 test("impactMultiplier: mild near zero, collapses at Out-level", () => {
   expect(impactMultiplier(0)).toBe(1);
   expect(impactMultiplier(-0.7)).toBeCloseTo(0.895, 3);

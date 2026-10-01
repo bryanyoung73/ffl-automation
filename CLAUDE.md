@@ -283,6 +283,16 @@ not run for the draft board). Bundles cache to `.cache/` (gitignored).
 `match.ts` joins players across providers via the Sleeper dump (`espn_id` +
 `yahoo_id`).
 
+`mergeIntel` (`apply.ts`) sorts each player's notes newest-first across
+providers — EXCEPT Vegas always sorts last unless it's the only note a
+player has. Vegas notes get stamped `asOf: now()` on every single fetch
+(it's freshly-computed matchup context, not dated news), so without this a
+real injury/depth-chart report — correctly dated to when it actually
+happened — would lose the recency sort to Vegas nearly every time, and
+`notes[0]` (the only note both the CLI and the dashboard display) would
+show "Implied total X" for almost every player regardless of what else was
+actually known about them.
+
 The draft board also carries `BoardEntry.adpChange` (ESPN
 `averageDraftPositionPercentChange`) → an `↑`/`↓` next to the ADP number for
 fast movers. Display-only; does not affect ordering or `--blend`.
