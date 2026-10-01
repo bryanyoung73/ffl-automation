@@ -81,8 +81,9 @@ function renderLineup(view) {
 }
 
 function renderPair(p) {
+  const dropRos = p.dropValue ? ` <span class="muted">ROS ${p.dropValue.rosVal} · wk ${p.dropValue.weekVal}</span>` : "";
   const dropLine = p.drop
-    ? `<div class="drop">DROP ${escapeHtml(p.drop.name)} (${escapeHtml(p.drop.position)})</div>`
+    ? `<div class="drop">DROP ${escapeHtml(p.drop.name)} (${escapeHtml(p.drop.position)})${dropRos}</div>`
     : "";
   return `
     <div class="pair">
